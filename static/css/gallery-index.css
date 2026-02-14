@@ -1,0 +1,74 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #fff;
+}
+
+.topbar {
+  text-align: center;
+  padding: 60px 20px;
+}
+
+.topbar h1 {
+  font-size: 36px;
+  font-weight: 600;
+}
+
+.gallery-grid {
+  max-width: 1400px;
+  margin: auto;
+  padding: 0 40px 60px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 40px;
+}
+
+.gallery-card {
+  text-decoration: none;
+  color: inherit;
+}
+
+.gallery-cover {
+  position: relative;
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.gallery-cover img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  transition: transform 0.6s ease;
+}
+
+.gallery-card:hover img {
+  transform: scale(1.05);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  color: #fff;
+  text-align: center;
+}
+
+.gallery-card:hover .overlay {
+  opacity: 1;
+}
+
+.overlay h2 {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.overlay p {
+  font-size: 14px;
+  opacity: 0.85;
+}

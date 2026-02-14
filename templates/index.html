@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PhotoShare | Photographer's Platform</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+@keyframes slowZoom {
+    0% {
+        transform: scale(1);
+    }
+    100% {
+        transform: scale(1.12);
+    }
+}
+
+.scale-animation {
+    animation: slowZoom 25s ease-in-out infinite alternate;
+}
+</style>
+
+</head>
+<body class="bg-[#0B0F1A] text-white">
+
+<!-- ================= NAVBAR ================= -->
+<nav class="flex items-center justify-between px-10 py-6 absolute w-full z-50">
+    <h1 class="text-2xl font-bold tracking-wide">PHOTOSHARE</h1>
+
+    <div class="hidden md:flex space-x-8 text-gray-300">
+        <a href="#" class="hover:text-white">Products</a>
+        <a href="#" class="hover:text-white">Examples</a>
+        <a href="#plans" class="hover:text-white">Pricing</a>
+    </div>
+
+    <a href="/login"
+       class="bg-emerald-500 hover:bg-emerald-600 transition px-6 py-2 rounded-md text-black font-semibold">
+        Open Dashboard
+    </a>
+</nav>
+
+<!-- ================= HERO ================= -->
+<!-- ================= HERO WITH ANIMATED BACKGROUND ================= -->
+<section class="relative h-[90vh] overflow-hidden">
+
+    <!-- Background image -->
+    <div class="absolute inset-0 bg-[url('/static/uploads/photo1.jpg')] 
+                bg-cover bg-center scale-animation"></div>
+
+    <!-- Dark overlay -->
+    <div class="absolute inset-0 bg-black/60"></div>
+
+    <!-- Content -->
+    <div class="relative z-10 h-full flex items-center">
+    <div class="max-w-7xl mx-auto px-10 w-full">
+        
+        <!-- LEFT aligned content -->
+        <div class="max-w-3xl text-left">
+
+            <p class="uppercase tracking-widest text-emerald-400 font-semibold mb-4">
+                Photographer Platform
+            </p>
+
+            <h1 class="text-white text-5xl md:text-6xl font-bold leading-tight">
+                Designed for photographers.<br>
+                Built to help you grow.
+            </h1>
+
+            <p class="text-gray-300 text-lg mt-6">
+                Deliver photos, sell prints, book clients and manage your business —
+                all in one beautiful platform.
+            </p>
+
+        <a href="{{ url_for('register') }}"
+   class="bg-green-500 hover:bg-green-600 transition-all duration-300
+          text-white px-8 py-4 rounded-lg font-semibold inline-block">
+    Get Started
+</a>
+
+        </div>
+
+    </div>
+</div>
+</section>
+
+<!-- ================= PIXIESET STYLE STATS SECTION ================= -->
+<section class="hidden">
+    <div class="max-w-7xl mx-auto">
+
+        <!-- Top grid -->
+        <div class="grid md:grid-cols-2 gap-16 items-start">
+
+            <!-- Left content -->
+            <div>
+                <p class="text-emerald-500 uppercase tracking-widest text-sm font-semibold mb-6">
+                    Industry leader
+                </p>
+
+                <h2 class="text-4xl md:text-5xl font-bold leading-tight mb-6">
+                    Find out why we're<br>
+                    best-in-class.
+                </h2>
+
+                <p class="text-gray-600 text-lg max-w-xl">
+                    The #1 go-to photographer platform to deliver photos, sell prints,
+                    book clients, get paid and more — all in a single place.
+                </p>
+            </div>
+
+            <!-- Right stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-16 gap-y-12">
+                <div>
+                    <h3 class="text-3xl font-bold">1 million+ users</h3>
+                    <p class="text-gray-600 mt-2">of PhotoShare globally</p>
+                </div>
+
+                <div>
+                    <h3 class="text-3xl font-bold">10+ years experience</h3>
+                    <p class="text-gray-600 mt-2">helping photographers grow</p>
+                </div>
+
+                <div>
+                    <h3 class="text-3xl font-bold">6 billion+ photos</h3>
+                    <p class="text-gray-600 mt-2">delivered via PhotoShare</p>
+                </div>
+
+                <div>
+                    <h3 class="text-3xl font-bold">₹1.5 billion+</h3>
+                    <p class="text-gray-600 mt-2">earned by creators on our platform</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bottom heading -->
+        <div class="text-center mt-36">
+            <p class="text-emerald-500 uppercase tracking-widest text-sm font-semibold mb-6">
+                Designed for every workflow
+            </p>
+
+            <h2 class="text-4xl md:text-5xl font-bold mb-6">
+                Made for all photographers.
+            </h2>
+
+            <p class="text-gray-600 text-lg max-w-3xl mx-auto">
+                From weddings to landscapes and everything in between,
+                PhotoShare is built to elevate your business and showcase your work beautifully.
+            </p>
+        </div>
+
+    </div>
+</section>
+
+
+<!-- ================= PLANS ================= -->
+<section id="plans" class="py-28 px-10 bg-[#0E1424]">
+    <h2 class="text-center text-4xl font-bold mb-16">Pricing Plans</h2>
+
+    <div class="grid md:grid-cols-3 gap-10 max-w-6xl mx-auto">
+        {% for plan in plans %}
+        <div class="bg-[#141B2D] rounded-2xl p-8 shadow-xl hover:-translate-y-2 transition">
+            <h3 class="text-xl font-semibold mb-4">{{ plan[1] }}</h3>
+
+            <p class="text-4xl font-bold text-emerald-400 mb-6">
+                ₹{{ plan[2] }}
+            </p>
+
+            <ul class="space-y-3 text-gray-300 mb-8">
+                <li>✔ Storage: {{ plan[3] }} GB</li>
+                <li>✔ Duration: {{ plan[4] }} days</li>
+                <li>✔ Secure photo galleries</li>
+                <li>✔ Client access</li>
+            </ul>
+
+            <a href="{{ url_for('plan_details', plan_id=plan[0]) }}"
+               class="block text-center bg-indigo-600 hover:bg-indigo-700 transition py-3 rounded-xl">
+                View Plan
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="py-12 text-center text-gray-500 bg-[#0B0F1A]">
+    © 2026 PhotoShare · Built for photographers
+</footer>
+
+</body>
+</html>

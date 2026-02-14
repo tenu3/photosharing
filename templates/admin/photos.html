@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>All Photos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+
+<div class="max-w-7xl mx-auto p-10">
+    <h1 class="text-3xl font-bold mb-6">All Uploaded Photos</h1>
+
+    <div class="grid grid-cols-3 gap-6">
+        {% for p in photos %}
+        <div class="bg-white shadow rounded">
+            <img src="{{ url_for('static', filename=p[1]) }}"
+                 class="h-48 w-full object-cover">
+            <div class="p-3">
+                <p class="text-sm">{{ p[2] }}</p>
+                <p class="text-xs text-gray-500">By {{ p[3] }}</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>

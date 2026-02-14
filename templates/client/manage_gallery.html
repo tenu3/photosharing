@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<meta charset="UTF-8">
+<title>{{ gallery.title }} · Manage</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: #f9fafb;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  background: #111;
+  color: #fff;
+  padding: 28px 22px;
+}
+
+.sidebar h2 {
+  font-size: 18px;
+  margin-bottom: 24px;
+}
+
+.sidebar a {
+  display: block;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  border-radius: 8px;
+  color: #ccc;
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+  background: #1f2937;
+  color: #fff;
+}
+
+.sidebar hr {
+  border: none;
+  border-top: 1px solid #333;
+  margin: 20px 0;
+}
+
+/* ===== MAIN ===== */
+.main {
+  padding: 40px;
+}
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 32px;
+}
+
+.main-header h1 {
+  font-size: 28px;
+  margin: 0;
+}
+
+.btn {
+  background: #c7a36b;
+  color: #000;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ===== PHOTOS ===== */
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 24px;
+}
+
+.photo-grid img {
+  width: 100%;
+  height: 200px;
+  object-fit: cover;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .3s ease;
+}
+
+.photo-grid img:hover {
+  transform: scale(1.04);
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: flex;
+    overflow-x: auto;
+  }
+
+  .sidebar a {
+    white-space: nowrap;
+  }
+}
+.copy-link-btn {
+  background: #111;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.copy-link-btn:hover {
+  background: #c7a36b;
+  color: black;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: #111;
+  color: white;
+  padding: 12px 22px;
+  border-radius: 999px;
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.35s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+a i {
+    margin-right: 10px;
+    width: 20px;
+    text-align: center;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="layout">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <h2>{{ gallery.title }}</h2>
+
+   <a href="{{ url_for('manage_gallery', gallery_id=gallery.id) }}"
+   <class="active">
+  <i class="fas fa-image"></i> Photos</a
+</a>
+<a href="{{ url_for('gallery_settings', gallery_id=gallery.id) }}">
+  <i class="fas fa-cog"></i> Gallery Settings</a>
+</a>
+<a href="{{ url_for('gallery_access', gallery_id=gallery.id) }}">
+  <i class="fas fa-users"></i> Client Access</a>
+</a>
+<a href="{{ url_for('gallery_favorites', gallery_id=gallery.id) }}">
+ <i class="fas fa-heart"></i> Favorites</a>
+</a>
+
+    <hr>
+<a href="{{ url_for('delete_gallery_confirm', gallery_id=gallery.id) }}"
+    style="color:red;">
+     <i class="fas fa-trash"></i> Delete Gallery
+</a>
+
+    <a href="{{ url_for('manage_galleries') }}"> 
+     <i class="fas fa-arrow-left"></i> Back
+    </a>
+     <!-- Dashboard Button -->
+        <a href="{{ url_for('client_dashboard') }}"
+           class="bg-gray-200 text-gray-800 px-5 py-2 rounded-full hover:bg-gray-300 transition">
+            <i class="fas fa-home"></i> Dashboard
+        </a>
+        <a href="{{ url_for('homepage') }}">
+          <i class="fas fa-globe"></i> Homepage
+        </a>
+  </aside>
+  
+
+  <!-- ===== MAIN ===== -->
+  <main class="main">
+
+    <div class="main-header">
+      <h1>Photos</h1>
+     <a href="{{ url_for('upload_photos_page', gallery_id=gallery.id) }}"
+   class="btn">
+    Upload Photos
+</a>
+
+{% if gallery.is_public %}
+  <button
+  onclick="copyPublicLink({{ gallery.id }})"
+  class="bg-black text-white px-6 py-2 rounded-full hover:bg-gray-800 transition">
+  🔗 Copy Public Link
+</button>
+
+{% else %}
+  <button class="copy-link-btn" disabled style="opacity:.4">
+    🔒 Gallery is Private
+  </button>
+{% endif %}
+
+<input
+  type="text"
+  id="galleryLink"
+  value="{{ request.host_url }}client/gallery/{{ gallery.id }}"
+  readonly
+  style="position:absolute; left:-9999px;"
+>
+<div id="toast" class="toast">
+  Link copied to clipboard
+</div>
+
+
+    </div>
+
+    {% if photos %}
+    <div class="photo-grid">
+      {% for photo in photos %}
+        <img src="{{ url_for('static', filename=photo.photo_path) }}">
+      {% endfor %}
+    </div>
+    {% else %}
+      <p>No photos yet.</p>
+    {% endif %}
+
+  </main>
+
+</div>
+<script>
+function copyPublicLink(galleryId) {
+  const link = window.location.origin + "/gallery/" + galleryId;
+
+  navigator.clipboard.writeText(link)
+    .then(() => {
+      alert("Public link copied:\n" + link);
+    })
+    .catch(() => {
+      prompt("Copy this link:", link);
+    });
+}
+</script>
+
+<script>
+function copyGalleryLink() {
+  const input = document.getElementById("galleryLink");
+  input.select();
+  input.setSelectionRange(0, 99999);
+  navigator.clipboard.writeText(input.value);
+
+  showToast();
+}
+
+function showToast() {
+  const toast = document.getElementById("toast");
+  toast.classList.add("show");
+
+  setTimeout(() => {
+    toast.classList.remove("show");
+  }, 2500);
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Checkout | PhotoShare</title>
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+</head>
+<body>
+
+<script>
+var options = {
+    "key": "{{ razorpay_key }}",
+    "amount": "{{ order.amount }}",
+    "currency": "INR",
+    "name": "PhotoShare",
+    "description": "Plan Subscription",
+    "order_id": "{{ order.id }}",
+    "handler": function (response){
+        window.location.href =
+          "/client/razorpay/success?"
+          + "razorpay_payment_id=" + response.razorpay_payment_id
+          + "&razorpay_order_id=" + response.razorpay_order_id
+          + "&razorpay_signature=" + response.razorpay_signature;
+    },
+    "theme": {
+        "color": "#C9A46A"
+    }
+};
+var rzp = new Razorpay(options);
+rzp.open();
+</script>
+
+</body>
+</html>

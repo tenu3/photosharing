@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Users</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-8">
+
+<h1 class="text-3xl font-bold mb-1">Manage Users</h1>
+<p class="text-gray-600 mb-6">Client accounts overview</p>
+
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+    <table class="min-w-full text-left border-collapse">
+
+        <!-- TABLE HEADER -->
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-sm font-semibold">Name</th>
+                <th class="px-6 py-3 text-sm font-semibold">Business Name</th>
+                <th class="px-6 py-3 text-sm font-semibold">Email</th>
+                <th class="px-6 py-3 text-sm font-semibold">Phone</th>
+                <th class="px-6 py-3 text-sm font-semibold">Status</th>
+                <th class="px-6 py-3 text-sm font-semibold">
+                    Action 
+                </th>
+            </tr>
+        </thead>
+
+        <!-- TABLE BODY -->
+        <tbody class="divide-y">
+
+            {% for user in users %}
+            <tr class="hover:bg-gray-50">
+
+                <td class="px-6 py-4 font-medium">
+                    {{ user[1] }}
+                </td>
+
+                <td class="px-6 py-4">
+                    {{ user[2] if user[2] else '-' }}
+                </td>
+
+                <td class="px-6 py-4">
+                    {{ user[3] }}
+                </td>
+
+                <td class="px-6 py-4">
+                    {{ user[4] }}
+                </td>
+
+                <td class="px-6 py-4">
+                    {% if user[5] == 'active' %}
+                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
+                            Active
+                        </span>
+                    {% else %}
+                        <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm">
+                            Inactive
+                        </span>
+                    {% endif %}
+                </td>
+
+                <td class="px-6 py-4">
+                    <a href="{{ url_for('toggle_user', id=user[0]) }}"
+                       class="bg-blue-600 text-white px-4 py-1.5 rounded hover:bg-blue-700 text-sm">
+                       Active/Deactive
+                    </a>
+                </td>
+
+            </tr>
+            {% endfor %}
+
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

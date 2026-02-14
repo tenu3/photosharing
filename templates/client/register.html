@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Client Registration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+
+<div class="bg-white border rounded-xl shadow-sm p-8 w-full max-w-md">
+
+    <h2 class="text-2xl font-bold mb-1 text-center">Create Account</h2>
+    <p class="text-gray-500 text-sm text-center mb-6">
+        Register as a client
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for c,m in messages %}
+        <p class="text-red-600 text-sm text-center mb-3">{{ m }}</p>
+    {% endfor %}
+    {% endwith %}
+
+<!-- GOOGLE SIGNUP -->
+
+<a href="{{ url_for('google_login') }}"
+   class="w-full border border-gray-300 rounded-lg py-3
+          flex items-center justify-center gap-3
+          hover:bg-gray-50 mb-4">
+
+    <img src="https://developers.google.com/identity/images/g-logo.png"
+         alt="Google"
+         class="w-5 h-5">
+
+    <span class="font-medium">Continue with Google</span>
+</a>
+
+<div class="flex items-center my-4">
+    <div class="flex-grow border-t"></div>
+    <span class="mx-2 text-gray-400 text-sm">or</span>
+    <div class="flex-grow border-t"></div>
+</div>
+
+<div class="flex items-center my-6">
+    <hr class="flex-1">
+    <span class="px-3 text-sm text-gray-400">Or use your email</span>
+    <hr class="flex-1">
+</div>
+
+
+    <form method="POST" class="space-y-4">
+
+        <input name="name" placeholder="Full Name" required
+               class="w-full border px-4 py-2 rounded-lg">
+
+        <input type="email" name="email" placeholder="Email" required
+               class="w-full border px-4 py-2 rounded-lg">
+               
+        <input type="password" name="password" placeholder="Password" required
+               class="w-full border px-4 py-2 rounded-lg">
+
+        <button class="w-full bg-gray-900 text-white py-2 rounded-lg">
+            Register
+        </button>
+
+    </form>
+
+    <p class="text-sm text-center mt-4">
+        Already have an account?
+        <a href="/client/login" class="text-blue-600">Login</a>
+    </p>
+
+</div>
+
+</body>
+</html>

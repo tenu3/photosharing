@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f7f7f7;
+    margin: 0;
+    padding: 40px;
+}
+
+h1 {
+    margin-bottom: 30px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 30px;
+    margin-bottom: 50px;
+}
+
+.card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+    transition: transform 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+    color: #000;
+}
+
+.card:hover {
+    transform: translateY(-4px);
+}
+
+.card .number {
+    font-size: 42px;
+    font-weight: bold;
+    color: #caa35c;
+}
+
+.card .label {
+    margin-top: 10px;
+    font-size: 16px;
+    color: #555;
+}
+
+/* Storage */
+.progress-bar {
+    background: #eee;
+    height: 8px;
+    border-radius: 10px;
+    margin-top: 15px;
+    overflow: hidden;
+}
+
+.progress {
+    height: 100%;
+    background: #caa35c;
+}
+
+/* Settings */
+.settings {
+    background: #fff;
+    border-radius: 12px;
+    padding: 30px;
+    max-width: 500px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+}
+
+.settings h3 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.settings a {
+    display: block;
+    padding: 12px 0;
+    text-decoration: none;
+    color: #333;
+    border-bottom: 1px solid #eee;
+}
+
+.settings a:hover {
+    color: #caa35c;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Dashboard</h1>
+
+<div class="cards">
+
+    <!-- TOTAL GALLERIES -->
+    <a href="{{ url_for('client_galleries') }}" class="card">
+        <div class="number">{{ total_galleries }}</div>
+        <div class="label">Total Galleries</div>
+    </a>
+
+    <!-- TOTAL PHOTOS -->
+    <a href="{{ url_for('client_photos') }}" class="card">
+        <div class="number">{{ total_photos }}</div>
+        <div class="label">Total Photos</div>
+    </a>
+
+   <div class="stat-card">
+  <h2>{{ storage_used }} MB</h2>
+  <p>Storage Used</p>
+</div>
+
+        <div class="progress-bar">
+            <div class="progress" style="width: {{ storage_percent }}%"></div>
+        </div>
+
+        <small>{{ total_storage_gb - storage_used_gb }} GB remaining out of {{ total_storage_gb }} GB</small>
+    </div>
+
+</div>
+
+<!-- ACCOUNT SETTINGS -->
+<div class="settings">
+    <h3>Account Settings</h3>
+
+    <a href="{{ url_for('edit_profile') }}">Edit Profile</a>
+    <a href="{{ url_for('change_password') }}">Change Password</a>
+    <a href="{{ url_for('logout') }}">Logout</a>
+</div>
+
+</body>
+</html>

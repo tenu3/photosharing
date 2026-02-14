@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Favorites | {{ gallery.title }}</title>
+
+<style>
+:root {
+  --gold: #c7a36b;
+  --dark: #111;
+  --muted: #6b7280;
+  --bg: #f9fafb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--dark);
+}
+
+/* Header */
+.header {
+  padding: 28px 40px;
+  background: white;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.header span {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.back-link {
+  text-decoration: none;
+  font-size: 14px;
+  color: var(--gold);
+}
+
+/* Grid */
+.wrapper {
+  max-width: 1400px;
+  margin: 40px auto;
+  padding: 0 30px;
+}
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 26px;
+}
+
+/* Card */
+.photo-card {
+  background: white;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+  transition: transform .25s ease;
+}
+
+.photo-card:hover {
+  transform: translateY(-4px);
+}
+
+.photo-card img {
+  width: 100%;
+  height: 260px;
+  object-fit: cover;
+  cursor: pointer;
+}
+
+/* Info */
+.photo-info {
+  padding: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.photo-name {
+  font-size: 13px;
+  color: #374151;
+}
+
+.like {
+  font-size: 15px;
+  color: #e11d48;
+}
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 120px 20px;
+  color: var(--muted);
+}
+
+.empty h2 {
+  margin-bottom: 10px;
+}
+
+/* Lightbox */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.lightbox.hidden { display: none; }
+
+.lightbox img {
+  max-width: 90%;
+  max-height: 85vh;
+  border-radius: 10px;
+}
+
+.close {
+  position: absolute;
+  top: 30px;
+  right: 40px;
+  font-size: 32px;
+  color: white;
+  cursor: pointer;
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div>
+    <h1>Favorites</h1>
+    <span>{{ gallery.title }}</span>
+  </div>
+
+  <a href="{{ url_for('view_gallery', gallery_id=gallery.id) }}" class="back-link">
+    ← Back to Gallery
+  </a>
+</div>
+
+<!-- CONTENT -->
+<div class="wrapper">
+
+{% if photos %}
+  <div class="photo-grid">
+    {% for photo in photos %}
+      <div class="photo-card">
+        <img
+          src="{{ url_for('static', filename=photo.photo_path) }}"
+          onclick="openLightbox('{{ url_for('static', filename=photo.photo_path) }}')"
+        >
+
+        <div class="photo-info">
+          <div class="photo-name">
+            {{ photo.original_name or "Photo" }}
+          </div>
+          <div class="like">❤️</div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty">
+    <h2>No favorites yet</h2>
+    <p>Liked photos will appear here.</p>
+  </div>
+{% endif %}
+
+</div>
+
+<!-- LIGHTBOX -->
+<div id="lightbox" class="lightbox hidden" onclick="closeLightbox()">
+  <span class="close">×</span>
+  <img id="lightboxImg">
+</div>
+
+<script>
+function openLightbox(src) {
+  document.getElementById("lightboxImg").src = src;
+  document.getElementById("lightbox").classList.remove("hidden");
+}
+
+function closeLightbox() {
+  document.getElementById("lightbox").classList.add("hidden");
+}
+
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeLightbox();
+});
+</script>
+
+</body>
+</html>

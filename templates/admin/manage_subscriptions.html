@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Subscriptions</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen p-8">
+
+<h1 class="text-3xl font-bold mb-1">Subscription Plans</h1>
+<p class="text-gray-600 mb-6">Manage subscription offerings</p>
+
+<a href="{{ url_for('add_subscription') }}"
+   class="inline-block mb-4 bg-black text-white px-6 py-3 rounded-xl font-semibold hover:bg-gray-800">
+    + Add Plan
+</a>
+
+<div class="bg-white rounded-xl shadow overflow-x-auto">
+    <table class="min-w-full text-left border-collapse">
+
+        <thead class="bg-gray-50">
+            <tr>
+                <th class="px-6 py-3 text-sm font-semibold">Name</th>
+                <th class="px-6 py-3 text-sm font-semibold">Price</th>
+                <th class="px-6 py-3 text-sm font-semibold">Storage(GB)</th>
+                <th class="px-6 py-3 text-sm font-semibold">Duration(No.of Daya)</th>
+                <th class="px-6 py-3 text-sm font-semibold">Status</th>
+                <th class="px-6 py-3 text-sm font-semibold">Action</th>
+            </tr>
+        </thead>
+
+        <tbody class="divide-y">
+            {% for plan in plans %}
+            <tr class="hover:bg-gray-50">
+
+                <td class="px-6 py-4 font-medium">{{ plan[1] }}</td>
+                <td class="px-6 py-4">₹{{ plan[2] }}</td>
+                <td class="px-6 py-4">{{ plan[3] }}</td>
+                <td class="px-6 py-4">{{ plan[4] }} days</td>
+
+                <td class="px-6 py-4">
+                    {% if plan[5] == 'active' %}
+                        <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm">
+                            Active
+                        </span>
+                    {% else %}
+                        <span class="bg-red-100 text-red-700 px-3 py-1 rounded-full text-sm">
+                            Inactive
+                        </span>
+                    {% endif %}
+                </td>
+
+                <td class="px-6 py-4 flex gap-2">
+                    <!-- FUTURE EDIT BUTTON -->
+                    <a href="{{ url_for('edit_subscription', id=plan[0]) }}"
+                       class="bg-yellow-500 text-white px-4 py-1.5 rounded text-sm hover:bg-yellow-600">
+                        Edit
+                    </a>
+
+                    <!-- EXISTING TOGGLE -->
+                    <a href="{{ url_for('toggle_subscription', id=plan[0]) }}"
+                       class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">
+                        Active/Deactive
+                    </a>
+                </td>
+
+            </tr>
+            {% endfor %}
+        </tbody>
+
+    </table>
+</div>
+
+</body>
+</html>

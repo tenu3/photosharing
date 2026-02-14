@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Upload Photos | {{ gallery.title }}</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+<div class="bg-white p-10 rounded-2xl shadow-xl w-full max-w-xl">
+
+  <h2 class="text-2xl font-semibold mb-2">Upload Photos</h2>
+  <p class="text-gray-500 mb-6">
+    Gallery: <strong>{{ gallery.title }}</strong>
+  </p>
+
+  <!-- ================= LOCAL UPLOAD ================= -->
+  <form id="uploadForm"
+        action="{{ url_for('upload_photos', gallery_id=gallery.id) }}"
+        method="POST"
+        enctype="multipart/form-data">
+
+    <div id="dropzone"
+         class="border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:border-yellow-500 transition">
+      <p class="text-gray-600 font-medium">Drop photos here</p>
+      <p class="text-sm text-gray-400 mt-2">or click to select files</p>
+    </div>
+
+    <input type="file"
+           id="fileInput"
+           name="photos"
+           multiple
+           hidden>
+  </form>
+
+  <!-- ================= UPLOAD FROM WEB ================= -->
+  <div class="mt-8 border-t pt-6">
+    <h3 class="text-lg font-medium mb-3">Upload from Web</h3>
+
+    <input
+      type="url"
+      id="imageUrl"
+      placeholder="Paste image URL (https://...)"
+      class="w-full border px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-500"
+    >
+
+    <button
+      type="button"
+      onclick="uploadFromUrl()"
+      class="mt-3 w-full bg-gray-900 text-white py-3 rounded-full hover:bg-black transition">
+      Import Image
+    </button>
+
+    <p class="text-sm text-gray-400 mt-2">
+      Works with direct image links (.jpg, .png, .webp)
+    </p>
+  </div>
+
+  <a href="{{ url_for('manage_gallery', gallery_id=gallery.id) }}"
+     class="block text-center mt-6 text-gray-500 hover:underline">
+    ← Back to Gallery
+  </a>
+
+</div>
+
+<script>
+const dropzone = document.getElementById("dropzone");
+const input = document.getElementById("fileInput");
+const form = document.getElementById("uploadForm");
+
+// Drag & Drop
+dropzone.addEventListener("click", () => input.click());
+
+dropzone.addEventListener("dragover", e => {
+  e.preventDefault();
+  dropzone.classList.add("border-yellow-500");
+});
+
+dropzone.addEventListener("dragleave", () => {
+  dropzone.classList.remove("border-yellow-500");
+});
+
+dropzone.addEventListener("drop", e => {
+  e.preventDefault();
+  dropzone.classList.remove("border-yellow-500");
+  input.files = e.dataTransfer.files;
+  form.submit(); // ✅ AUTO upload
+});
+
+// Click upload
+input.addEventListener("change", () => {
+  form.submit(); // ✅ AUTO upload
+});
+
+// Upload from URL
+function uploadFromUrl() {
+  const url = document.getElementById("imageUrl").value.trim();
+
+  if (!url) {
+    alert("Please paste an image URL");
+    return;
+  }
+
+  fetch("{{ url_for('upload_photo_from_url', gallery_id=gallery.id) }}", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ image_url: url })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      window.location.href =
+        "{{ url_for('manage_gallery', gallery_id=gallery.id) }}";
+    } else {
+      alert(data.error || "Failed to import image");
+    }
+  })
+  .catch(() => alert("Error importing image"));
+}
+</script>
+
+</body>
+</html>

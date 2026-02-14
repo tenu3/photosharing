@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{% block title %}{% endblock %}</title>
+
+  <style>
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 60px;
+      border-bottom: 1px solid #eee;
+    }
+
+    .nav a {
+      margin-left: 20px;
+      text-decoration: none;
+      color: #333;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .nav a.active {
+      background: #d2ab67;
+      color: white;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">PHOTOSHARE</div>
+
+  <nav class="nav">
+    <a href="{{ url_for('client_dashboard') }}"
+       class="{% if active_page == 'dashboard' %}active{% endif %}">
+      Dashboard
+    </a>
+
+    <a href="{{ url_for('client_galleries') }}"
+       class="{% if active_page == 'galleries' %}active{% endif %}">
+      Galleries
+    </a>
+
+    <a href="{{ url_for('client_settings') }}"
+       class="{% if active_page == 'settings' %}active{% endif %}">
+      Settings
+    </a>
+  </nav>
+</header>
+
+{% block content %}{% endblock %}
+
+</body>
+</html>

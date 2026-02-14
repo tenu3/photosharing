@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Favorites</title>
+  <style>
+    body {
+      background: #111;
+      color: white;
+      font-family: Arial;
+    }
+
+    h1 {
+      text-align: center;
+      margin: 40px 0;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px,1fr));
+      gap: 20px;
+      padding: 40px;
+    }
+
+    .photo {
+      position: relative;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .photo img {
+      width: 100%;
+      known height: auto;
+    }
+
+    .remove {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 50%;
+      padding: 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+
+<body>
+
+<h1>❤️ Favorites</h1>
+
+<div class="grid">
+  {% for photo in photos %}
+    <div class="photo">
+      <img src="{{ url_for('static', filename=photo.photo_path) }}">
+      <div class="remove" onclick="toggleLike({{ photo.id }})">❤️</div>
+    </div>
+  {% endfor %}
+</div>
+
+<script>
+function toggleLike(photoId) {
+  fetch(`/client/photo/${photoId}/like`, { method: "POST" })
+    .then(() => location.reload());
+}
+</script>
+
+</body>
+</html>

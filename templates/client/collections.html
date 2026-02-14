@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Collections</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 40px;
+            background: #fff;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
+        }
+
+        .card {
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            background: #fff;
+            text-decoration: none;
+            color: inherit;
+            transition: transform .2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            background: #eee;
+        }
+
+        .card-body {
+            padding: 16px;
+        }
+
+        .card-body h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .card-body p {
+            margin-top: 6px;
+            color: #777;
+            font-size: 14px;
+        }
+
+        .collections-header {
+             display: flex;
+             justify-content: space-between;
+             align-items: center;
+             margin-bottom: 30px;
+        }
+
+        .btn-primary {
+            padding: 10px 18px;
+            background: #000;
+            color: #fff;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            transition: 0.3s ease;
+        }
+
+        .btn-primary:hover {
+             background: #222;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="collections-header">
+    <h1>Galleries</h1>
+
+     <a href="{{ url_for('client_dashboard') }}" class="btn-primary">
+       Dashboard
+    </a>
+
+    <a href="{{ url_for('create_collection') }}" class="btn-primary">
+        + New Collection
+    </a>
+</div>
+
+<div class="grid">
+    {% for g in galleries %}
+        <a href="{{ url_for('manage_gallery', gallery_id=g.id) }}" class="card">
+            <img src="
+                {% if g.cover_photo %}
+                    {{ url_for('static', filename=g.cover_photo) }}
+                {% else %}
+                    {{ url_for('static', filename='defaults/gallery-cover.jpg') }}
+                {% endif %}
+            ">
+            <div class="card-body">
+                <h3>{{ g.title }}</h3>
+                <p>{{ g.photo_count }} items</p>
+            </div>
+        </a>
+    {% endfor %}
+</div>
+
+</body>
+</html>

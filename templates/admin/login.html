@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+<div class="bg-white p-8 rounded-lg shadow-lg w-full max-w-md">
+    <h2 class="text-2xl font-bold text-center mb-6">Admin Login</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="mb-4 text-sm text-red-600 text-center">
+            {{ message }}
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form method="POST">
+        <div class="mb-4">
+            <label class="block mb-1 font-medium">Email</label>
+            <input type="email" name="email" required
+                   class="w-full border px-3 py-2 rounded focus:outline-none focus:ring">
+        </div>
+
+        <div class="mb-6">
+            <label class="block mb-1 font-medium">Password</label>
+            <input type="password" name="password" required
+                   class="w-full border px-3 py-2 rounded focus:outline-none focus:ring">
+        </div>
+
+        <button type="submit"
+                class="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+            Login
+        </button>
+    </form>
+
+    <p class="text-center text-sm mt-4">
+        Don’t have an account?
+        <a href="{{ url_for('admin_register') }}"
+           class="text-blue-600 hover:underline">
+            Register
+        </a>
+    </p>
+</div>
+
+</body>
+</html>

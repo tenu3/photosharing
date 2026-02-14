@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Client Galleries</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/gallery-index.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+  <h1>Client photo galleries</h1>
+</header>
+
+<div class="gallery-grid">
+
+  {% for gallery in galleries %}
+  <a href="{{ url_for('view_gallery', gallery_id=gallery.id) }}" class="gallery-card">
+
+    <div class="gallery-cover">
+      <img src="{{ url_for('static', filename=gallery.cover_photo) }}">
+      <div class="overlay">
+        <h2>{{ gallery.title }}</h2>
+        {% if gallery.description %}
+        <p>{{ gallery.description }}</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </a>
+  {% endfor %}
+
+</div>
+
+</body>
+</html>

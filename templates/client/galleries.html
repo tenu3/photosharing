@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Collections</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #fafafa;
+            margin: 0;
+            padding: 40px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        /* GRID */
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+        }
+
+        /* CARD */
+        .gallery-card {
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.2s ease;
+        }
+
+        .gallery-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .gallery-card img {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            background: #eee;
+        }
+
+        .gallery-info {
+            padding: 14px;
+        }
+
+        .gallery-info h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .gallery-info p {
+            margin: 6px 0 0;
+            color: #777;
+            font-size: 13px;
+        }
+
+        /* MENU */
+        .gallery-menu {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 5;
+        }
+
+        .menu-btn {
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        .menu-dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 34px;
+            background: white;
+            border-radius: 6px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            min-width: 140px;
+            overflow: hidden;
+        }
+
+        .menu-dropdown a,
+        .menu-dropdown button {
+            display: block;
+            padding: 10px 14px;
+            text-align: left;
+            background: none;
+            border: none;
+            width: 100%;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .menu-dropdown a {
+            text-decoration: none;
+            color: #333;
+        }
+
+        .menu-dropdown button {
+            color: #c7a36b;
+        }
+
+        .menu-dropdown a:hover,
+        .menu-dropdown button:hover {
+            background: #f5f5f5;
+        }
+
+        .menu-dropdown.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Galleries</h1>
+
+<div class="gallery-grid">
+
+{% for gallery in galleries %}
+    <div class="gallery-card">
+
+        <!-- MENU -->
+        <div class="gallery-menu">
+            <button class="menu-btn" onclick="toggleMenu({{ gallery.id }})">⋮</button>
+
+            <div class="menu-dropdown" id="menu-{{ gallery.id }}">
+                <a href="{{ url_for('view_gallery', gallery_id=gallery.id) }}">
+                    Open Gallery
+                </a>
+
+                <button onclick="deleteGallery({{ gallery.id }})">
+                    Delete Gallery
+                </button>
+            </div>
+        </div>
+
+        <!-- COVER -->
+        <img src="{{ url_for('static', filename=gallery.cover_photo or 'defaults/gallery-cover.jpg') }}">
+
+        <!-- INFO -->
+        <div class="gallery-info">
+            <h3>{{ gallery.title }}</h3>
+            <p>{{ gallery.photo_count }} items · {{ gallery.created_at }}</p>
+        </div>
+
+    </div>
+{% endfor %}
+
+</div>
+
+<script>
+function toggleMenu(id) {
+    document
+        .getElementById("menu-" + id)
+        .classList.toggle("show");
+}
+
+function deleteGallery(id) {
+    if (!confirm("Delete this gallery and all photos?")) return;
+
+    fetch(`/client/gallery/${id}/delete`, {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("Failed to delete gallery");
+        }
+    });
+}
+</script>
+
+</body>
+</html>

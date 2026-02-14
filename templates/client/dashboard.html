@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard | PhotoShare</title>
+
+<link rel="stylesheet"
+ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+<style>
+:root {
+  --gold: #c7a36b;
+  --dark: #111;
+  --muted: #6b7280;
+  --bg: #f9fafb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+}
+
+/* ===== LAYOUT ===== */
+.dashboard {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  min-height: 100vh;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar {
+  background: #111;
+  color: white;
+  padding: 28px 22px;
+}
+
+.sidebar h2 {
+  letter-spacing: 5px;
+  font-size: 18px;
+  margin-bottom: 40px;
+}
+
+.sidebar a {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #ccc;
+  text-decoration: none;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: 0.25s;
+}
+
+.sidebar a:hover,
+.sidebar a.active {
+  background: rgba(199,163,107,0.15);
+  color: white;
+}
+
+/* ===== MAIN ===== */
+.main {
+  padding: 40px 50px;
+}
+
+/* Header */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 40px;
+}
+
+.header h1 {
+  font-size: 28px;
+}
+
+.header span {
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* ===== STATS ===== */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 24px;
+  margin-bottom: 50px;
+}
+
+.stat-card {
+  background: white;
+  padding: 22px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+.stat-card h3 {
+  font-size: 22px;
+  margin: 0;
+}
+
+.stat-card p {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ===== ACTIONS ===== */
+.actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 30px;
+}
+
+.action-card {
+  background: white;
+  border-radius: 18px;
+  padding: 30px;
+  box-shadow: 0 15px 40px rgba(0,0,0,0.06);
+}
+
+.action-card h3 {
+  margin-bottom: 10px;
+}
+
+.action-card p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin-bottom: 22px;
+}
+
+.action-card a {
+  display: inline-block;
+  background: var(--gold);
+  color: white;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+/* ===== MOBILE ===== */
+@media (max-width: 900px) {
+  .dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    display: flex;
+    justify-content: space-around;
+    padding: 16px;
+  }
+
+  .sidebar h2 {
+    display: none;
+  }
+}
+/* STORAGE BAR */
+.storage-bar {
+  width: 100%;
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  margin: 12px 0;
+  overflow: hidden;
+}
+
+.storage-fill {
+  height: 100%;
+  background: var(--gold);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.upgrade-btn {
+  background: var(--gold);
+  color: white;
+  padding: 10px 22px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 14px;
+  display: inline-block;
+}
+
+.upgrade-btn:hover {
+  opacity: 0.9;
+}
+
+
+</style>
+</head>
+
+<body>
+
+<div class="dashboard">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <h2>PHOTOSHARE</h2>
+
+    <a href="{{ url_for('client_dashboard') }}" class="active">
+      <i class="fa-solid fa-house"></i> Dashboard
+    </a>
+     
+    <a href="{{ url_for('manage_galleries') }}">
+  <i class="fa-solid fa-images"></i> Galleries
+</a>
+
+
+    <a href="{{ url_for('create_gallery') }}">
+      <i class="fa-solid fa-plus"></i> Create Gallery
+    </a>
+
+    <a href="{{ url_for('client_settings') }}">
+      <i class="fa-solid fa-gear"></i> Settings
+    </a>
+
+    <a href="{{ url_for('client_logout') }}">
+      <i class="fa-solid fa-right-from-bracket"></i> Logout
+    </a>
+    <a href="{{ url_for('homepage') }}">
+    <i class="fa-solid fa-globe"></i> Homepage
+  </a>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div>
+        <h1>Welcome back 👋</h1>
+        <span>Manage your client galleries and deliveries</span>
+      </div>
+    </div>
+
+    <!-- STATS -->
+  <section class="stats">
+  <div class="stat-card">
+    <h3>{{ total_galleries }}</h3>
+    <p>Total Galleries</p>
+  </div>
+
+  <div class="stat-card">
+    <h3>{{ total_photos }}</h3>
+    <p>Total Photos</p>
+  </div>
+
+  <div class="stat-card">
+    <h3>{{ total_favorites }}</h3>
+    <p>Client Favorites</p>
+  </div>
+  {% if storage_warning %}
+<div style="
+    background:#fff3cd;
+    color:#856404;
+    padding:10px;
+    border-radius:8px;
+    margin-bottom:10px;
+">
+    ⚠ You are close to your storage limit. Consider upgrading.
+</div>
+{% endif %}
+
+ <!-- STORAGE CARD -->
+<div class="card">
+    <h3>Storage Used</h3>
+
+    <p>
+        {{ used_gb }} GB of {{ total_storage_gb }} GB
+    </p>
+
+    <!-- Progress bar -->
+    <div style="width:100%; height:10px; background:#eee; border-radius:10px; overflow:hidden; margin:10px 0;">
+        <div
+            style="
+                width: {{ percent_used }}%;
+                height:100%;
+                background:#c9a063;
+                transition: width 0.5s ease;
+            ">
+        </div>
+    </div>
+
+    <p>{{ percent_used }}% used</p>
+
+   <a href="{{ url_for('upgrade_storage') }}" class="btn-upgrade"
+       style="
+           display:inline-block;
+           background:#c9a063;
+           color:white;
+           padding:10px 18px;
+           border-radius:25px;
+           text-decoration:none;
+           margin-top:10px;
+       ">
+        Upgrade Storage
+    </a>
+</div>
+
+
+
+
+
+</section>
+
+
+    <!-- ACTIONS -->
+    <section class="actions">
+      <div class="action-card">
+        <h3>Create a Gallery</h3>
+        <p>Upload photos, set privacy, and share galleries with your clients.</p>
+        <a href="{{ url_for('create_gallery') }}">Create Gallery</a>
+      </div>
+
+      <div class="action-card">
+        <h3>Manage Galleries</h3>
+        <p>Edit galleries, view favorites, and download client selections.</p>
+        <a href="{{ url_for('manage_galleries') }}">Manage Galleries</a>
+      </div>
+    </section>
+
+  </main>
+
+</div>
+
+</body>
+</html>

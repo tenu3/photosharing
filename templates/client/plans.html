@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Subscription Plans</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Tailwind CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+
+<!-- ================= HEADER ================= -->
+<header class="bg-indigo-600">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+    <h1 class="text-white text-xl font-bold">PhotoShare</h1>
+    <a href="/" class="text-white hover:underline text-sm">Home</a>
+  </div>
+</header>
+
+<!-- ================= PLANS SECTION ================= -->
+<section class="py-16">
+  <div class="max-w-7xl mx-auto px-6">
+
+    <h2 class="text-4xl font-bold text-center mb-12">
+      Subscription Plans
+    </h2>
+
+    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+
+      {% for plan in plans %}
+      <div
+        class="bg-white rounded-2xl shadow-md hover:shadow-xl transition transform hover:-translate-y-2 duration-300 p-8">
+
+        <!-- Plan Name -->
+        <h3 class="text-2xl font-semibold mb-2">
+          {{ plan[1] }}
+        </h3>
+
+        <!-- Price -->
+        <p class="text-3xl font-bold text-indigo-600 mb-4">
+          ₹{{ plan[2] }}
+          <span class="text-sm text-slate-500">/ plan</span>
+        </p>
+
+        <!-- Details -->
+        <ul class="space-y-2 text-slate-600 mb-6">
+          <li>📦 Storage: <b>{{ plan[3] }} GB</b></li>
+          <li>⏳ Duration: <b>{{ plan[4] }} days</b></li>
+          <li>
+            🔖 Status:
+            {% if plan[5] == 'Active' %}
+              <span class="text-green-600 font-semibold">Active</span>
+            {% else %}
+              <span class="text-red-600 font-semibold">Inactive</span>
+            {% endif %}
+          </li>
+        </ul>
+
+        <!-- View Button -->
+       <a href="{{ url_for('plan_details', plan_id=plan[0]) }}">
+          class="block text-center bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition">
+          View Plan
+        </a>
+      </div>
+      {% endfor %}
+
+    </div>
+
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer class="bg-slate-900 text-slate-300 py-6 mt-16">
+  <p class="text-center text-sm">
+    © {{ 2026 }} PhotoShare. All rights reserved.
+  </p>
+</footer>
+
+</body>
+</html>

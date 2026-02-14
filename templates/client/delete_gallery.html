@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Delete Gallery</title>
+
+<style>
+:root {
+  --danger: #dc2626;
+  --danger-bg: #fee2e2;
+  --dark: #111;
+  --muted: #6b7280;
+  --bg: #f9fafb;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+
+  /* CENTER EVERYTHING */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+/* CARD */
+.card {
+  width: 100%;
+  max-width: 520px;
+  background: white;
+  border-radius: 20px;
+  padding: 36px 32px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.08);
+  text-align: center;
+}
+
+/* HEADINGS */
+.card h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* WARNING */
+.warning {
+  margin: 28px 0;
+  padding: 16px 18px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+/* ACTIONS */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 30px;
+}
+
+/* BUTTONS */
+button {
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 12px 24px;
+  border-radius: 999px;
+}
+
+.btn-danger {
+  background: var(--danger);
+  color: white;
+}
+
+.btn-danger:hover {
+  opacity: 0.9;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+  color: #111;
+  text-decoration: none;
+  display: inline-block;
+}
+
+/* MOBILE */
+@media (max-width: 480px) {
+  .card {
+    padding: 28px 22px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+  <h1>Delete Gallery</h1>
+
+  <p>
+    Are you sure you want to permanently delete
+    <strong>{{ gallery.title }}</strong>?
+  </p>
+
+  <div class="warning">
+    ⚠️ This action cannot be undone.<br>
+    All photos and favorites will be deleted.
+  </div>
+
+  <form method="POST"
+        action="{{ url_for('delete_gallery', gallery_id=gallery.id) }}">
+    <div class="actions">
+      <button type="submit" class="btn-danger">
+        Delete Gallery
+      </button>
+
+      <a href="{{ url_for('manage_gallery', gallery_id=gallery.id) }}"
+         class="btn-cancel">
+        Cancel
+      </a>
+    </div>
+  </form>
+</div>
+
+</body>
+</html>

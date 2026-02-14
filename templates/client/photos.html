@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ gallery.title }}</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 30px;
+            background: #fff;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-weight: normal;
+        }
+
+        .photo-grid {
+           display: grid;
+           grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+           gap: 24px;
+        }
+
+
+
+        .gallery-photo {
+            width: 100%;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+        }
+
+        .gallery-photo:hover {
+            transform: scale(1.02);
+        }
+
+        /* LIGHTBOX */
+        .lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .lightbox.hidden {
+            display: none;
+        }
+
+        .lightbox img {
+            max-width: 90%;
+            max-height: 85vh;
+            border-radius: 8px;
+        }
+
+        .close {
+            position: absolute;
+            top: 24px;
+            right: 32px;
+            font-size: 32px;
+            color: white;
+            cursor: pointer;
+        }
+
+        .lightbox-controls {
+            position: absolute;
+            bottom: 40px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .lightbox-controls button,
+        .lightbox-controls a {
+            background: rgba(255,255,255,0.15);
+            color: white;
+            padding: 12px 16px;
+            border-radius: 50%;
+            font-size: 18px;
+            border: none;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        .nav {
+            position: absolute;
+            top: 50%;
+            font-size: 48px;
+            background: none;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .prev { left: 30px; }
+        .next { right: 30px; }
+
+
+        .photo-card {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+            padding-bottom: 12px;
+            background: #fff;
+        }
+
+        .photo-card img {
+            width: 100%;
+            height: 220px;
+            object-fit: cover;
+            display: block;
+        }
+
+        .photo-name {
+            font-size: 13px;
+            text-align: center;
+            margin-top: 8px;
+            color: #374151;
+        }
+        .photo-actions {
+            position: absolute;
+            bottom: 12px;
+            right: 12px;
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: opacity 0.25s ease;
+        }
+
+        .photo-card:hover .photo-actions {
+           opacity: 1;
+        }
+
+        .action-btn {
+           background: rgba(0,0,0,0.7);
+           color: white;
+           border: none;
+           padding: 8px 10px;
+           border-radius: 999px;
+           font-size: 14px;
+           cursor: pointer;
+           text-decoration: none;
+        }
+
+        .action-btn:hover {
+           background: rgba(0,0,0,0.9);
+           transform: scale(1.08);
+        }
+
+        .like-btn.active {
+           background: #e11d48;
+        }
+        .like-btn.burst {
+           transform: scale(1.4);
+           transition: transform .3s ease;
+        }
+        .like-count {
+            color: white;
+            font-size: 13px;
+            margin-left: 4px;
+        }
+        /* LIKES MODAL */
+        .likes-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10000;
+        }
+        .photo-like-count {
+            text-align: center;
+            font-size: 13px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+
+
+        .likes-modal.hidden {
+            display: none;
+        }
+
+        .likes-box {
+            background: #111;
+            padding: 24px 30px;
+            border-radius: 12px;
+            min-width: 280px;
+            color: white;
+        }
+
+        .likes-box h3 {
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .likes-box ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .likes-box li {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.15);
+            text-align: center;
+        }
+
+        .likes-box .close {
+            position: absolute;
+            top: 20px;
+            right: 24px;
+            font-size: 26px;
+            cursor: pointer;
+        }
+
+        /* HEART LIKE ANIMATION */
+        .like-heart {
+            position: absolute;
+            bottom: 70px;
+            right: 50%;
+            transform: translateX(50%) scale(0);
+            font-size: 64px;
+            color: #e11d48;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .like-heart.animate {
+            animation: heartPop 0.9s ease forwards;
+        }
+
+        @keyframes heartPop {
+        0% {
+             transform: translateX(50%) scale(0);
+             opacity: 0;
+           }
+        40% {
+              transform: translateX(50%) scale(1.3);
+              opacity: 1;
+            }
+        100% {
+              transform: translateX(50%) scale(1);
+              opacity: 0;
+            }
+            }
+
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 12px;
+        }
+
+        .delete-btn {
+            padding: 6px 10px;
+            background: #c7a36b;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+        }
+
+        .delete-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .delete-btn:hover:not(:disabled) {
+            background: #c7a36b;
+        }
+    </style>
+</head>
+<body>
+
+<h1>{{ gallery.title }}</h1>
+
+<section id="gallery-section">
+  <div class="photo-grid">
+
+    {% for photo in photos %}
+      <div class="photo-card">
+<img
+  src="{{ url_for('static', filename=photo.photo_path) }}"
+  class="gallery-photo"
+  data-index="{{ loop.index0 }}"
+  data-id="{{ photo.id }}"
+  data-full="{{ url_for('static', filename=photo.photo_path) }}"
+  onclick="openLightbox({{ loop.index0 }})"
+/>
+
+
+
+        <div class="photo-name">
+          {{ photo.original_name }}
+      
+       <div class="photo-like-count">
+            ❤️ {{ photo.like_count }}
+        </div>
+  <button
+    class="action-btn like-btn {% if photo.liked %}active{% endif %}"
+    onclick="toggleLike({{ photo.id }}, this)"
+  >❤️</button>
+
+  <button
+    class="action-btn"
+    onclick="showLikes({{ photo.id }})"
+  >👥</button>
+
+  <span class="like-count" id="like-count-{{ photo.id }}">
+    {{ photo.like_count }}
+  </span>
+</div>
+
+
+        <div class="controls">
+          <input type="checkbox" class="photo-checkbox">
+
+          <button
+            class="delete-btn"
+            disabled
+            onclick="deletePhoto({{ photo.id }})">
+            🗑 Delete
+          </button>
+        </div>
+
+      </div>
+    {% endfor %}
+
+  </div>
+</section>
+
+<script>
+/* ACTIVATE DELETE BUTTON WHEN CHECKBOX IS CHECKED */
+document.querySelectorAll(".photo-checkbox").forEach(cb => {
+    cb.addEventListener("change", function () {
+        const card = this.closest(".photo-card");
+        const deleteBtn = card.querySelector(".delete-btn");
+        deleteBtn.disabled = !this.checked;
+    });
+});
+
+/* DELETE PHOTO */
+function deletePhoto(photoId) {
+    if (!confirm("Are you sure you want to delete this photo?")) return;
+
+    fetch(`/client/photo/delete/${photoId}`, {
+        method: "POST"
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert("Failed to delete photo");
+        }
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Error deleting photo");
+    });
+}
+</script>
+<script>
+function likePhoto(photoId) {
+  fetch(`/client/photo/${photoId}/like`, { method: "POST" })
+    .then(res => res.json())
+    .then(data => {
+      const btn = document.getElementById("likeBtn");
+
+      if (data.liked) {
+        btn.classList.add("liked");
+      } else {
+        btn.classList.remove("liked");
+      }
+
+      document.getElementById("likeCount").innerText = data.count;
+      photos[currentIndex].favorite_count = data.count;
+    });
+}
+
+
+function sharePhoto(photoUrl) {
+    if (navigator.share) {
+        navigator.share({
+            title: "Photo",
+            url: photoUrl
+        });
+    } else {
+        navigator.clipboard.writeText(photoUrl);
+        alert("Photo link copied!");
+    }
+}
+</script>
+<script>
+let currentIndex = 0;
+const photos = document.querySelectorAll(".gallery-photo");
+
+function openLightbox(index) {
+  currentIndex = index;
+  updateLightbox();
+  document.getElementById("lightbox").classList.remove("hidden");
+}
+
+/* LIGHTBOX LIKE */
+function toggleLightboxLike() {
+  const img = photos[currentIndex];
+  toggleLike(img.dataset.id, document.getElementById("lightbox-like"));
+}
+function closeLightbox() {
+  document.getElementById("lightbox").classList.add("hidden");
+}
+
+function updateLightbox() {
+  const img = photos[currentIndex];
+  document.getElementById("lightboxImage").src = img.dataset.full;
+document.getElementById("likeCount").innerText = img.favorite_count || 0;
+}
+
+
+function nextPhoto() {
+  currentIndex = (currentIndex + 1) % photos.length;
+  updateLightbox();
+}
+
+function prevPhoto() {
+  currentIndex = (currentIndex - 1 + photos.length) % photos.length;
+  updateLightbox();
+}
+
+/* GRID LIKE */
+function toggleLike() {
+  const photoId = photos[currentIndex].dataset.id;
+  const heart = document.getElementById("likeHeart");
+
+  fetch(`/client/photo/${photoId}/like`, {
+    method: "POST"
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.liked) {
+      heart.classList.remove("animate");
+      void heart.offsetWidth; // restart animation
+      heart.classList.add("animate");
+    }
+  })
+  .catch(err => {
+    console.error(err);
+    alert("Error liking photo");
+  });
+}
+
+function copyLink() {
+  navigator.clipboard.writeText(
+    photos[currentIndex].src
+  );
+  alert("Link copied!");
+}
+
+function showLikes(photoId) {
+  fetch(`/client/photo/${photoId}/likes`)
+    .then(res => res.json())
+    .then(data => {
+      const ul = document.getElementById("likesList");
+      ul.innerHTML = "";
+
+      if (data.length === 0) {
+        ul.innerHTML = "<li>No likes yet</li>";
+      } else {
+        data.forEach(user => {
+          ul.innerHTML += `<li>${user.name}</li>`;
+        });
+      }
+
+      document.getElementById("likesModal").classList.remove("hidden");
+    })
+    .catch(err => {
+      console.error(err);
+      alert("Error loading likes");
+    });
+}
+let lastTap = 0;
+
+function handleDoubleTap() {
+  const now = Date.now();
+  if (now - lastTap < 300) {
+    toggleLike();
+  }
+  lastTap = now;
+}
+
+function closeLikes() {
+  document.getElementById("likesModal").classList.add("hidden");
+}
+
+/* Keyboard support */
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") closeLightbox();
+  if (e.key === "ArrowRight") nextPhoto();
+  if (e.key === "ArrowLeft") prevPhoto();
+});
+</script>
+
+<div id="lightbox" class="lightbox hidden">
+  <span class="close" onclick="closeLightbox()">×</span>
+
+<img id="lightboxImage" />
+
+
+  <div class="lightbox-controls">
+    <div id="likeHeart" class="like-heart">❤️</div>
+  <button id="likeBtn" class="likeBtn">
+  ❤️ <span id="likeCount">0</span>
+</button>
+
+  <a id="downloadBtn" download>⬇</a>
+  <button onclick="copyLink()">🔗</button>
+</div>
+
+  <button class="nav prev" onclick="prevPhoto()">‹</button>
+  <button class="nav next" onclick="nextPhoto()">›</button>
+</div>
+<!-- LIKES MODAL -->
+<div id="likesModal" class="likes-modal hidden">
+  <div class="likes-box">
+    <span class="close" onclick="closeLikes()">×</span>
+    <h3>Liked by</h3>
+    <ul id="likesList"></ul>
+  </div>
+</div>
+
+</body>
+</html>

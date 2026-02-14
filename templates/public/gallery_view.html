@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ gallery.title }} – Public Gallery</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: #f9fafb;
+            color: #111827;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 3rem 1rem;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+        h1 {
+            font-size: 2.8rem;
+            margin-bottom: 0.75rem;
+        }
+        .description {
+            font-size: 1.2rem;
+            color: #4b5563;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 2rem;
+        }
+        .photo-card {
+            border-radius: 16px;
+            overflow: hidden;
+            background: white;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        .photo-card:hover {
+            transform: scale(1.03);
+        }
+        .photo-card img {
+            width: 100%;
+            height: 380px;
+            object-fit: cover;
+            display: block;
+        }
+        .photo-caption {
+            padding: 1.2rem;
+            text-align: center;
+            font-size: 1rem;
+            color: #374151;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 10rem 1rem;
+            color: #6b7280;
+        }
+        .empty-icon { font-size: 6rem; color: #d1d5db; margin-bottom: 1.5rem; }
+        .back-to-home {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #c7a36b;
+            text-decoration: none;
+            font-weight: 500;
+            margin-top: 2rem;
+        }
+        .back-to-home:hover { text-decoration: underline; }
+        @media (max-width: 768px) {
+            .photo-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+            h1 { font-size: 2.2rem; }
+        }
+        .like-btn, .download-btn {
+  background: rgba(0,0,0,0.75);
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  border-radius: 999px;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.like-btn:hover,
+.download-btn:hover {
+  background: #c7a36b;
+  transform: scale(1.1);
+}
+
+.like-btn.liked {
+  background: #e63946;
+}
+
+.photo-card {
+  position: relative;
+}
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+
+        <header>
+            <h1>{{ gallery.title }}</h1>
+            {% if gallery.description %}
+                <p class="description">{{ gallery.description }}</p>
+            {% endif %}
+        </header>
+{% if photos %}
+<div class="photo-grid">
+  {% for photo in photos %}
+  <div class="photo-card relative">
+
+    <img
+      src="{{ url_for('static', filename=photo.photo_path) }}"
+      alt="{{ photo.original_name }}"
+      loading="lazy"
+    >
+
+    <!-- Overlay -->
+    <div class="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100
+                transition flex items-center justify-center gap-4">
+
+      <!-- LIKE -->
+     <div class="like-section">
+    <button class="like-btn" onclick="likePhoto({{ photo.id }}, this)">
+        ❤️
+    </button>
+    <span class="like-count">{{ photo.likes or 0 }}</span>
+</div>
+
+
+      <!-- DOWNLOAD -->
+      <a href="{{ url_for('static', filename=photo.photo_path) }}"
+         download
+         class="download-btn">
+        ⬇
+      </a>
+    </div>
+
+    {% if photo.original_name %}
+    <div class="photo-caption">
+      {{ photo.original_name }}
+    </div>
+    {% endif %}
+
+  </div>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="empty-state">
+  <h2>This gallery has no photos yet</h2>
+  <p>Come back later to see beautiful moments!</p>
+</div>
+{% endif %}
+
+
+<script>
+function likePhoto(photoId, btn) {
+    fetch("/like_photo", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        },
+        body: "photo_id=" + photoId
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === "success") {
+            const countSpan = btn.nextElementSibling;
+            countSpan.textContent = data.likes;
+
+            btn.classList.add("liked");
+            setTimeout(() => {
+                btn.classList.remove("liked");
+            }, 300);
+        } else {
+            alert(data.message);
+        }
+    });
+}
+</script>
+<script>
+function toggleLike(btn)
+  const photoId = btn.dataset.photo;
+
+  fetch(`/photo/${photoId}/like`, {
+    method: "POST"
+  })
+  .then(res => res.json())
+  .then(data => {
+    btn.querySelector(".count").innerText = data.count;
+
+    if (data.liked) {
+      btn.classList.add("liked");
+    } else {
+      btn.classList.remove("liked");
+    }
+  })
+  .catch(() => alert("Error liking photo"));<script>
+function likePhoto(photoId) {
+  const name = prompt("Your name (optional):") || "Guest";
+
+  fetch(`/gallery/photo/${photoId}/like`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name })
+  })
+  .then(res => res.json())
+  .then(data => {
+    alert(data.message || "Liked ❤️");
+  });
+}
+</script>
+
+
+</script>
+
+</body>
+</html>

@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Account Settings | PhotoShare</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            color: #111;
+        }
+
+        /* Header */
+        header {
+            padding: 24px 70px;
+            border-bottom: 1px solid #eee;
+            font-size: 22px;
+            letter-spacing: 5px;
+            font-weight: 500;
+        }
+
+        /* Page title */
+        .page-title {
+            font-size: 32px;
+            font-weight: 600;
+            margin: 50px 0 30px 70px;
+        }
+
+        /* Center wrapper */
+        .settings-wrapper {
+            display: flex;
+            justify-content: center;
+            padding-bottom: 80px;
+        }
+
+        /* Column */
+        .settings-container {
+            width: 100%;
+            max-width: 700px;
+            display: flex;
+            flex-direction: column;
+            gap: 40px;
+        }
+
+        /* Card */
+        .settings-card {
+            background: #ffffff;
+            padding: 32px;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+        }
+
+        .settings-card h2 {
+            margin-bottom: 22px;
+            font-size: 22px;
+            font-weight: 600;
+        }
+
+        label {
+            display: block;
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #444;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px 14px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #d2ab67;
+            box-shadow: 0 0 0 2px rgba(210,171,103,0.15);
+        }
+
+        button {
+            background: #d2ab67;
+            color: #fff;
+            border: none;
+            padding: 12px 26px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .note {
+            font-size: 13px;
+            color: #777;
+            margin-top: -10px;
+            margin-bottom: 18px;
+        }
+    </style>
+</head>
+<body>
+
+
+<h1 class="page-title">Account Settings</h1>
+
+<div class="settings-wrapper">
+    <div class="settings-container">
+
+        <!-- PROFILE -->
+        <div class="settings-card">
+            <h2>Profile</h2>
+
+            <form method="POST" action="{{ url_for('update_profile') }}">
+                <label>Name</label>
+                <input
+                    type="text"
+                    name="name"
+                    value="{{ client.name }}"
+                    required>
+
+                <label>Email</label>
+                <input
+                    type="email"
+                    value="{{ client.email }}"
+                    disabled>
+
+                <p class="note">Email cannot be changed.</p>
+
+                <button type="submit">Save Changes</button>
+            </form>
+        </div>
+
+        <!-- CHANGE PASSWORD -->
+        <div class="settings-card">
+            <h2>Change Password</h2>
+
+            <form method="POST" action="{{ url_for('change_password') }}">
+                <label>Current Password</label>
+                <input
+                    type="password"
+                    name="current_password"
+                    required>
+
+                <label>New Password</label>
+                <input
+                    type="password"
+                    name="new_password"
+                    required>
+
+                <button type="submit">Update Password</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+
+</body>
+</html>

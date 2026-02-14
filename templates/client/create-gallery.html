@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create Gallery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 min-h-screen flex items-center justify-center">
+
+<div class="bg-white shadow-xl rounded-xl w-full max-w-xl p-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-2">
+        Create Your First Gallery
+    </h2>
+
+    <p class="text-gray-500 mb-6">
+        Add a gallery name and description. You can upload photos next.
+    </p>
+
+    <form method="POST">
+        <!-- Gallery Name -->
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Gallery Name
+            </label>
+            <input
+                type="text"
+                name="title"
+                required
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                placeholder="Wedding Shoot / Portfolio / Travel"
+            >
+        </div>
+
+        <!-- Description -->
+        <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">
+                Description
+            </label>
+            <textarea
+                name="description"
+                rows="3"
+                class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:outline-none"
+                placeholder="Optional description for this gallery"
+            ></textarea>
+        </div>
+
+        <!-- Buttons -->
+        <div class="flex justify-between items-center">
+            <a href="{{ url_for('client_dashboard') }}"
+               class="text-gray-500 hover:underline">
+                Cancel
+            </a>
+
+           <form method="POST" action="{{ url_for('create_gallery') }}">
+    <input type="text" name="title" placeholder="Gallery Title" required>
+    <button type="submit">Create Gallery</button>
+</form>
+
+        </div>
+    </form>
+</div>
+
+</body>
+</html>

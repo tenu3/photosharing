@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Email Verification | PhotoShare</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+
+<div class="bg-white p-8 rounded-xl shadow-md w-full max-w-md text-center">
+    <h2 class="text-2xl font-bold mb-2">Verify your email</h2>
+    <p class="text-gray-500 mb-6">
+        Enter your email to continue
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for c, m in messages %}
+        <p class="text-red-600 text-sm mb-3">{{ m }}</p>
+      {% endfor %}
+    {% endwith %}
+
+    <form method="POST" class="space-y-4">
+        <input
+            type="email"
+            name="email"
+            placeholder="Email address"
+            required
+            class="w-full border px-4 py-2 rounded-lg"
+        >
+
+        <button class="w-full bg-gray-900 text-white py-2 rounded-lg">
+            Continue
+        </button>
+    </form>
+</div>
+
+</body>
+</html>

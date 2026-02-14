@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Admins</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 30px;
+            font-family: Arial, sans-serif;
+            background: #f5f6fa;
+        }
+
+        /* Header */
+        .page-header {
+            margin-bottom: 25px;
+        }
+
+        .page-header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .page-header p {
+            margin-top: 6px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        /* Card */
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 20px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+        }
+
+        /* Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+        }
+
+        thead th {
+            text-align: left;
+            font-size: 14px;
+            color: #6b7280;
+            padding: 12px 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        tbody td {
+            padding: 14px 10px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+
+        th:nth-child(1), td:nth-child(1) { width: 25%; }
+        th:nth-child(2), td:nth-child(2) { width: 35%; }
+        th:nth-child(3), td:nth-child(3) { width: 20%; }
+        th:nth-child(4), td:nth-child(4) { width: 20%; }
+
+        .center {
+            text-align: center;
+        }
+
+        /* Status badge */
+        .status {
+            padding: 5px 12px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: capitalize;
+            display: inline-block;
+        }
+
+        .status.active {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .status.inactive {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        /* Toggle button */
+        .toggle-btn {
+            padding: 6px 14px;
+            background: #2563eb;
+            color: white;
+            border-radius: 6px;
+            font-size: 13px;
+            text-decoration: none;
+        }
+
+        .toggle-btn:hover {
+            background: #1e40af;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Header -->
+<div class="page-header">
+    <h1>Manage Admins</h1>
+    <p>Administrator accounts overview</p>
+</div>
+
+<!-- Table Card -->
+<div class="card">
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th class="center">Status</th>
+                <th class="center">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for admin in admins %}
+            <tr>
+                <td><strong>{{ admin[1] }}</strong></td>
+                <td>{{ admin[2] }}</td>
+                <td class="center">
+                    <span class="status {{ admin[3] }}">
+                        {{ admin[3] }}
+                    </span>
+                </td>
+                <td class="center">
+                    <a href="{{ url_for('toggle_admin', id=admin[0]) }}" class="toggle-btn">
+Active/Deactive
+</a>
+
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+</body>
+</html>

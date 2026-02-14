@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Dashboard</title>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f5f6fa;
+        }
+
+        .container {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 230px;
+            background: #111827;
+            color: white;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 30px;
+        }
+
+        .sidebar a {
+            display: block;
+            padding: 12px 10px;
+            margin-bottom: 8px;
+            color: #e5e7eb;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 600;
+        }
+
+        .sidebar a:hover {
+            background: #1f2937;
+        }
+
+        .sidebar .logout {
+            color: #f87171;
+        }
+
+        /* Content */
+        .content {
+            flex: 1;
+            padding: 30px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 28px;
+        }
+
+        .header p {
+            margin-top: 6px;
+            color: #6b7280;
+        }
+
+        /* Cards */
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-top: 30px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 14px;
+            padding: 25px;
+            box-shadow: 0 6px 18px rgba(0,0,0,0.05);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 14px 30px rgba(0,0,0,0.12);
+        }
+
+        .card h4 {
+            margin: 0;
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .card h1 {
+            margin-top: 12px;
+            font-size: 36px;
+            color: #111827;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Admin Panel</h2>
+        <a href="{{ url_for('admin_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('manage_admins') }}">Manage Admins</a>
+        <a href="{{ url_for('manage_users') }}">Manage Users</a>
+        <a href="{{ url_for('manage_subscriptions') }}">Subscription Plans</a>
+        <a href="{{ url_for('admin_logout') }}" class="logout">Logout</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="content">
+
+        <div class="header">
+            <h1>Welcome, {{ name }}</h1>
+            <p>System overview & key metrics</p>
+        </div>
+
+        <div class="cards">
+
+            <div class="card" onclick="location.href='{{ url_for('manage_users') }}'">
+                <h4>Total Clients</h4>
+                <h1 id="totalClients">{{ total_clients }}</h1>
+            </div>
+
+            <div class="card" onclick="location.href='{{ url_for('manage_admins') }}'">
+                <h4>Active Admins</h4>
+                <h1 id="activeAdmins">{{ active_admins }}</h1>
+            </div>
+
+            <div class="card" onclick="location.href='{{ url_for('manage_subscriptions') }}'">
+                <h4>Subscription Plans</h4>
+                <h1 id="totalPlans">{{ total_plans }}</h1>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<script>
+    async function refreshStats() {
+        try {
+            const res = await fetch("{{ url_for('admin_stats') }}");
+            if (!res.ok) return;
+
+            const data = await res.json();
+
+            document.getElementById("totalClients").innerText = data.total_clients;
+            document.getElementById("activeAdmins").innerText = data.active_admins;
+            document.getElementById("totalPlans").innerText = data.total_plans;
+
+        } catch (err) {
+            console.error("Live update failed");
+        }
+    }
+
+    // Refresh every 5 seconds
+    setInterval(refreshStats, 5000);
+</script>
+
+</body>
+</html>

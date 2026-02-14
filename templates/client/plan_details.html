@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ plan[1] }} Plan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-slate-50 text-slate-900">
+
+<div class="plan-card">
+    <h2>{{ plan.name }}</h2>
+
+    <p class="price">₹{{ plan.price }}</p>
+
+    <p><strong>Storage:</strong> {{ plan.storage }} GB</p>
+    <p><strong>Duration:</strong> {{ plan.duration }} months</p>
+
+    <a href="{{ url_for('razorpay_pay', plan_id=plan.id) }}"
+       class="text-purple-600 underline">
+        Proceed to Payment
+    </a>
+
+    <br><br>
+    <a href="{{ url_for('pricing') }}">← Back to pricing</a>
+</div>
+
+</div>
+
+</body>
+</html>

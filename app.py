@@ -13,6 +13,11 @@ from functools import wraps
 from dotenv import load_dotenv
 import pymysql
 import os
+import cv2
+import numpy as np
+from PIL import Image
+from skimage.metrics import structural_similarity as ssim
+import os
 
 # ────────────────────────────────────────────────
 #  Imports from your own modules
@@ -2534,40 +2539,55 @@ def payment_success(plan_id):
     conn.close()
 
     return redirect(url_for('client_dashboard'))
+# =========================================
+# AI VISUAL SIMILARITY SEARCH (NO DLIB)
+# =========================================
+# =========================================
+# AI VISUAL SIMILARITY SEARCH (PREMIUM)
+# =========================================
 
-import os
-import cv2
-import numpy as np
-import pymysql
-import functools
-from PIL import Image
-from flask import request, jsonify
-
-# ================================
-# Histogram cache (PERFORMANCE)
-# ================================
-@functools.lru_cache(maxsize=512)
-def get_histogram(image_path):
+def extract_features(image_source):
+    """
+    Premium hybrid features:
+    - grayscale structure (SSIM)
+    - color histogram (normalized)
+    """
     try:
-        db_img = Image.open(image_path).convert("RGB").resize((300, 300))
-        db_hist = cv2.calcHist(
-            [np.array(db_img)],
+        if isinstance(image_source, str):
+            img = Image.open(image_source).convert("RGB")
+        else:
+            img = Image.open(image_source).convert("RGB")
+
+        img = img.resize((256, 256))
+        img_np = np.array(img)
+
+        # ⭐ structural feature
+        gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+
+        # ⭐ color histogram
+        hist = cv2.calcHist(
+            [img_np],
             [0, 1, 2],
             None,
             [8, 8, 8],
-            [0, 256, 0, 256, 0, 256]
+            [0, 256, 0, 256, 0, 256],
         )
-        cv2.normalize(db_hist, db_hist)
-        return db_hist
-    except Exception:
-        return None
+
+        # 🔥 normalize histogram
+        hist = cv2.normalize(hist, hist).flatten()
+
+        return gray, hist
+
+    except Exception as e:
+        print("Feature extraction error:", e)
+        return None, None
 
 
-# =================================
-# SEARCH SIMILAR IMAGES ROUTE
-# =================================
+# =========================================
+# SIMILAR IMAGE SEARCH
+# =========================================
 @app.route("/gallery/<int:gallery_id>/search-similar", methods=["POST"])
-def search_similar(gallery_id):
+def search_similar_faces(gallery_id):
 
     # ---------- check upload ----------
     if "image" not in request.files:
@@ -2575,24 +2595,17 @@ def search_similar(gallery_id):
 
     file = request.files["image"]
 
-    if file.filename == "":
-        return jsonify({"success": False, "error": "Empty file"})
-
-    # ---------- process query image safely ----------
     try:
-        img = Image.open(file.stream).convert("RGB")
-        img = img.resize((300, 300))
-    except Exception:
-        return jsonify({"success": False, "error": "Invalid image file"})
+        query_gray, query_hist = extract_features(file.stream)
 
-    query_hist = cv2.calcHist(
-        [np.array(img)],
-        [0, 1, 2],
-        None,
-        [8, 8, 8],
-        [0, 256, 0, 256, 0, 256]
-    )
-    cv2.normalize(query_hist, query_hist)
+        if query_gray is None:
+            return jsonify({
+                "success": False,
+                "error": "Invalid image"
+            })
+
+    except Exception:
+        return jsonify({"success": False, "error": "Invalid image"})
 
     # ---------- DB ----------
     conn = mysql.connect()
@@ -2607,7 +2620,7 @@ def search_similar(gallery_id):
 
     results = []
 
-    # ---------- compare ----------
+    # ---------- compare images ----------
     for photo in photos:
         try:
             full_path = os.path.join(
@@ -2619,40 +2632,51 @@ def search_similar(gallery_id):
             if not os.path.exists(full_path):
                 continue
 
-            db_hist = get_histogram(full_path)
-            if db_hist is None:
+            db_gray, db_hist = extract_features(full_path)
+            if db_gray is None:
                 continue
 
-            similarity = cv2.compareHist(
+            # ⭐ structure similarity (0–1)
+            ssim_score = ssim(query_gray, db_gray)
+
+            # ⭐ color similarity (-1 to 1 → normalize to 0–1)
+            hist_score = cv2.compareHist(
                 query_hist,
                 db_hist,
                 cv2.HISTCMP_CORREL
             )
 
-            # ⭐ threshold (premium filtering)
-            if similarity > 0.6:
+            hist_score = max(0, min((hist_score + 1) / 2, 1))
+
+            # ⭐ FINAL PREMIUM SCORE
+            final_score = (0.65 * ssim_score) + (0.35 * hist_score)
+
+            # ⭐ convert to percentage
+            percent_score = final_score * 100
+
+            # =====================================
+            # 🔥 SHOW ONLY 60–100% MATCHES
+            # =====================================
+            if percent_score >= 10:
                 results.append({
                     "id": photo["id"],
                     "path": photo["photo_path"],
-                    "score": float(similarity)
+                    "score": round(percent_score, 2)
                 })
 
         except Exception as e:
-            print("Similarity error:", e)
+            print("Similarity compare error:", e)
             continue
 
-    # ---------- sort best first ----------
+    # ---------- sort best match ----------
     results.sort(key=lambda x: x["score"], reverse=True)
 
-    # ---------- close DB (your style) ----------
-    conn.commit()
     cur.close()
     conn.close()
 
-    # ---------- response ----------
     return jsonify({
         "success": True,
-        "results": results[:12]  # top matches
+        "results": results[:12]
     })
 if __name__ == "__main__":
     app.run(debug=True,host='0.0.0.0')

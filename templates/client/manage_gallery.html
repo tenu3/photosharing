@@ -241,19 +241,52 @@ a i {
 
     </div>
 
-    {% if photos %}
-    <div class="photo-grid">
-      {% for photo in photos %}
-        <img src="{{ url_for('static', filename=photo.photo_path) }}">
-      {% endfor %}
-    </div>
-    {% else %}
-      <p>No photos yet.</p>
-    {% endif %}
+   {% if photos %}
+<div class="photo-grid">
 
-  </main>
+  {% for photo in photos %}
+ <div class="relative group overflow-hidden rounded-2xl shadow-md photo-item"
+     data-id="{{ photo.id }}">
+
+    <!-- Drag handle -->
+    <div class="drag-handle absolute top-3 left-3 z-20
+                bg-black/60 text-white w-8 h-8 rounded-full
+                flex items-center justify-center cursor-move
+                opacity-0 group-hover:opacity-100 transition">
+        <i class="fas fa-grip-lines"></i>
+    </div>
+
+      <img src="{{ url_for('static', filename=photo.photo_path) }}"
+           class="w-full h-56 object-cover transition duration-500 group-hover:scale-105">
+
+      <!-- Delete Button -->
+      <form method="POST"
+            action="{{ url_for('delete_photo', photo_id=photo.id) }}"
+            class="absolute top-3 right-3 z-20">
+
+           <button type="submit"
+                onclick="return confirm('Delete this photo?')"
+                class="backdrop-blur-md bg-white/80 hover:bg-red-500 hover:text-white
+                       text-gray-700 w-9 h-9 rounded-full flex items-center
+                       justify-center shadow-lg transition-all duration-300
+                       opacity-0 group-hover:opacity-100">
+
+            🗑
+        </button>
+      </form>
+
+  </div>
+  {% endfor %}
 
 </div>
+
+{% else %}
+  <p style="color:#666; margin-top:20px;">
+    No photos uploaded yet.
+  </p>
+{% endif %}
+</div>
+</main>
 <script>
 function copyPublicLink(galleryId) {
   const link = window.location.origin + "/gallery/" + galleryId;
@@ -265,10 +298,7 @@ function copyPublicLink(galleryId) {
     .catch(() => {
       prompt("Copy this link:", link);
     });
-}
-</script>
-
-<script>
+  }
 function copyGalleryLink() {
   const input = document.getElementById("galleryLink");
   input.select();
@@ -287,6 +317,34 @@ function showToast() {
   }, 2500);
 }
 </script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+<script>
+const grid = document.querySelector(".photo-grid");
 
+new Sortable(grid, {
+    animation: 200,
+    handle: ".drag-handle",
+    ghostClass: "opacity-50",
+
+    onEnd: function () {
+        const order = [];
+
+        document.querySelectorAll(".photo-item").forEach((el, index) => {
+            order.push({
+                id: el.dataset.id,
+                position: index
+            });
+        });
+
+        fetch("{{ url_for('reorder_photos', gallery_id=gallery.id) }}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ order: order })
+        });
+    }
+});
+</script>
 </body>
 </html>

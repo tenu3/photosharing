@@ -4,53 +4,63 @@
   <meta charset="UTF-8">
   <title>Subscription Plans</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-  <!-- Tailwind CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
+<style>
+  .bg-gold {
+    background-color: #c7a36b;
+  }
+  .bg-gold:hover {
+    background-color: #c7a36b;
+  }
+  .text-gold {
+    color: #c7a36b;
+  }
+</style>
 
-<body class="bg-slate-50 text-slate-900">
 
-<!-- ================= HEADER ================= -->
-<header class="bg-indigo-600">
+<body class="bg-slate-100 text-slate-900">
+
+<!-- HEADER -->
+<header class="bg-slate-900">
+
   <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
     <h1 class="text-white text-xl font-bold">PhotoShare</h1>
-    <a href="/" class="text-white hover:underline text-sm">Home</a>
+    <a href="/" class="text-slate-300 hover:text-white text-sm">Homepage</a>
   </div>
 </header>
 
-<!-- ================= PLANS SECTION ================= -->
 <section class="py-16">
   <div class="max-w-7xl mx-auto px-6">
 
-    <h2 class="text-4xl font-bold text-center mb-12">
+    <h2 class="text-4xl font-bold text-center mb-12 text-slate-800">
       Subscription Plans
     </h2>
 
     <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
 
       {% for plan in plans %}
-      <div
-        class="bg-white rounded-2xl shadow-md hover:shadow-xl transition transform hover:-translate-y-2 duration-300 p-8">
+      <div class="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2 duration-300 p-8 border border-slate-200">
 
         <!-- Plan Name -->
-        <h3 class="text-2xl font-semibold mb-2">
-          {{ plan[1] }}
+        <h3 class="text-2xl font-semibold mb-2 text-slate-800">
+          {{ plan.name }}
         </h3>
 
         <!-- Price -->
-        <p class="text-3xl font-bold text-indigo-600 mb-4">
-          ₹{{ plan[2] }}
+       <p class="text-3xl font-bold text-gold mb-4">
+
+          ₹{{ plan.price }}
           <span class="text-sm text-slate-500">/ plan</span>
         </p>
 
         <!-- Details -->
         <ul class="space-y-2 text-slate-600 mb-6">
-          <li>📦 Storage: <b>{{ plan[3] }} GB</b></li>
-          <li>⏳ Duration: <b>{{ plan[4] }} days</b></li>
+          <li>📦 Storage: <b>{{ plan.size }} GB</b></li>
+          <li>⏳ Duration: <b>{{ plan.duration }} days</b></li>
           <li>
             🔖 Status:
-            {% if plan[5] == 'Active' %}
+            {% if plan.status == 'active' %}
               <span class="text-green-600 font-semibold">Active</span>
             {% else %}
               <span class="text-red-600 font-semibold">Inactive</span>
@@ -58,25 +68,36 @@
           </li>
         </ul>
 
-        <!-- View Button -->
-       <a href="{{ url_for('plan_details', plan_id=plan[0]) }}">
-          class="block text-center bg-indigo-600 text-white py-3 rounded-xl font-semibold hover:bg-indigo-700 transition">
-          View Plan
-        </a>
+        <!-- Buttons -->
+        <div class="space-y-3">
+     <a href="{{ url_for('plan_details', plan_id=plan.id) }}"
+   class="block text-center border border-slate-800 text-slate-800 py-2 rounded-xl font-semibold hover:bg-slate-800 hover:text-white transition">
+  View Plan
+</a>
+
+
+<a href="{{ url_for('purchase_plan', plan_id=plan.id) }}"
+   class="block text-center bg-gold text-white py-3 rounded-xl font-semibold hover:bg-[#b8962e] transition">
+  Purchase Plan
+</a>
+
+
+        </div>
+
       </div>
       {% endfor %}
 
     </div>
-
   </div>
 </section>
 
-<!-- ================= FOOTER ================= -->
-<footer class="bg-slate-900 text-slate-300 py-6 mt-16">
+<footer class="bg-slate-900 text-slate-400 py-6 mt-16">
+
   <p class="text-center text-sm">
-    © {{ 2026 }} PhotoShare. All rights reserved.
+    © 2026 PhotoShare. All rights reserved.
   </p>
 </footer>
+
 
 </body>
 </html>

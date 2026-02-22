@@ -1,0 +1,136 @@
+/* ========== RESET ========== */
+body {
+    margin: 0;
+    font-family: "Segoe UI", Tahoma, sans-serif;
+    background: #f4f5f7;
+    color: #111;
+}
+
+/* ========== TOP BAR ========== */
+.topbar {
+    background: #ffffff;
+    padding: 18px 50px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e4e4e4;
+}
+
+.topbar h2 {
+    margin: 0;
+    font-weight: 700;
+    letter-spacing: 4px;
+}
+
+.topbar nav a {
+    margin-left: 25px;
+    text-decoration: none;
+    color: #333;
+    font-weight: 500;
+}
+
+.topbar nav a:hover {
+    color: #c89b5a;
+}
+
+/* ========== PRICING SECTION ========== */
+.pricing-section {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.pricing-section h1 {
+    font-size: 36px;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    color: #777;
+    margin-bottom: 50px;
+}
+
+/* ========== GRID ========== */
+.pricing-grid {
+    display: flex;
+    justify-content: center;
+    gap: 35px;
+    flex-wrap: wrap;
+}
+
+/* ========== PLAN CARD ========== */
+.plan-card {
+    background: #fff;
+    padding: 35px 30px;
+    border-radius: 18px;
+    width: 300px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    transition: all 0.3s ease;
+}
+
+.plan-card:hover {
+    transform: translateY(-6px);
+}
+
+/* Featured middle plan */
+.plan-card.featured {
+    border: 2px solid #c89b5a;
+    box-shadow: 0 12px 35px rgba(200,155,90,0.25);
+}
+
+/* Plan title */
+.plan-card h3 {
+    margin-bottom: 15px;
+    font-size: 22px;
+}
+
+/* Price */
+.price {
+    font-size: 34px;
+    font-weight: bold;
+    color: #c89b5a;
+    margin-bottom: 20px;
+}
+
+.price span {
+    font-size: 16px;
+    color: #666;
+}
+
+/* Features list */
+.plan-card ul {
+    list-style: none;
+    padding: 0;
+    margin: 25px 0;
+    text-align: left;
+}
+
+.plan-card ul li {
+    margin: 10px 0;
+    color: #555;
+    font-size: 15px;
+}
+
+/* ========== GOLD BUTTON ========== */
+.gold-btn {
+    display: inline-block;
+    padding: 12px 30px;
+    border-radius: 25px;
+    background: linear-gradient(135deg, #c89b5a, #e0b875);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.gold-btn:hover {
+    background: linear-gradient(135deg, #b88a4c, #d6a960);
+    transform: translateY(-2px);
+}
+
+/* ========== RESPONSIVE ========== */
+@media (max-width: 900px) {
+    .pricing-grid {
+        flex-direction: column;
+        align-items: center;
+    }
+}

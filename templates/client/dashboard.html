@@ -160,20 +160,39 @@ body {
   }
 }
 /* STORAGE BAR */
-.storage-bar {
+/* Background bar */
+.storage-bar-bg {
   width: 100%;
   height: 10px;
   background: #e5e7eb;
   border-radius: 999px;
-  margin: 12px 0;
   overflow: hidden;
 }
 
-.storage-fill {
+/* Fill base */
+.storage-bar-fill {
   height: 100%;
-  background: var(--gold);
   border-radius: 999px;
-  transition: width 0.4s ease;
+  transition: width 0.8s ease;
+  position: relative;
+}
+
+/* Healthy (gold) */
+.storage-bar-fill.healthy {
+  background: linear-gradient(90deg, #c89b5e, #e5c07b);
+  box-shadow: 0 0 8px rgba(200, 155, 94, 0.35);
+}
+
+/* Warning (orange) */
+.storage-bar-fill.warning {
+  background: linear-gradient(90deg, #f59e0b, #fbbf24);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.45);
+}
+
+/* Critical (red) */
+.storage-bar-fill.critical {
+  background: linear-gradient(90deg, #ef4444, #f87171);
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.55);
 }
 .upgrade-btn {
   background: var(--gold);
@@ -187,6 +206,33 @@ body {
 
 .upgrade-btn:hover {
   opacity: 0.9;
+}
+.stat-card {
+    background: #fff;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+}
+
+.storage-text {
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.storage-percent {
+    font-size: 14px;
+    color: #666;
+    margin-top: 8px;
+}
+
+.upgrade-link {
+    color: #c7a36b;
+    font-weight: 600;
+    text-decoration: none;
+}
+.progress-fill {
+  background: linear-gradient(90deg, #c89b5e, #e5c07b);
+  transition: width 0.6s ease;
 }
 
 
@@ -237,6 +283,7 @@ body {
       </div>
     </div>
 
+
     <!-- STATS -->
   <section class="stats">
   <div class="stat-card">
@@ -265,40 +312,59 @@ body {
 </div>
 {% endif %}
 
- <!-- STORAGE CARD -->
-<div class="card">
-    <h3>Storage Used</h3>
+<!-- ⭐ PREMIUM STORAGE CARD -->
+<div class="bg-white rounded-2xl shadow-lg p-6 border border-slate-200">
 
-    <p>
-        {{ used_gb }} GB of {{ total_storage_gb }} GB
-    </p>
+  <div class="flex justify-between items-center mb-2">
+    <h4 class="text-lg font-semibold">Storage Used</h4>
 
-    <!-- Progress bar -->
-    <div style="width:100%; height:10px; background:#eee; border-radius:10px; overflow:hidden; margin:10px 0;">
-        <div
-            style="
-                width: {{ percent_used }}%;
-                height:100%;
-                background:#c9a063;
-                transition: width 0.5s ease;
-            ">
-        </div>
+    <!-- Status badge -->
+    {% if storage_percent >= 90 %}
+      <span class="px-2 py-1 text-xs font-semibold bg-red-100 text-red-600 rounded-full">
+        Critical
+      </span>
+    {% elif storage_percent >= 70 %}
+      <span class="px-2 py-1 text-xs font-semibold bg-amber-100 text-amber-600 rounded-full">
+        Nearly Full
+      </span>
+    {% else %}
+      <span class="px-2 py-1 text-xs font-semibold bg-green-100 text-green-600 rounded-full">
+        Healthy
+      </span>
+    {% endif %}
+  </div>
+
+  <!-- Usage text -->
+  <p class="text-slate-600 mb-4 font-medium">
+    {{ total_storage_gb }} GB of {{ plan_limit_gb }} GB
+  </p>
+
+  <!-- Progress bar -->
+  <div class="storage-bar-bg">
+    <div
+      class="storage-bar-fill
+        {% if storage_percent >= 90 %}
+          critical
+        {% elif storage_percent >= 70 %}
+          warning
+        {% else %}
+          healthy
+        {% endif %}"
+      style="width: {{ storage_percent }}%;">
     </div>
+  </div>
 
-    <p>{{ percent_used }}% used</p>
+  <!-- Percentage -->
+  <p class="text-sm text-slate-500 mt-3">
+    {{ storage_percent }}% used
+  </p>
 
-   <a href="{{ url_for('upgrade_storage') }}" class="btn-upgrade"
-       style="
-           display:inline-block;
-           background:#c9a063;
-           color:white;
-           padding:10px 18px;
-           border-radius:25px;
-           text-decoration:none;
-           margin-top:10px;
-       ">
-        Upgrade Storage
-    </a>
+  <!-- Upgrade -->
+  <a href="{{ url_for('upgrade_storage') }}"
+     class="inline-block mt-4 text-sm font-semibold text-#c7a36b-600 hover:underline">
+    Upgrade Storage →
+  </a>
+
 </div>
 
 

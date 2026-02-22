@@ -2,30 +2,62 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>{{ plan[1] }} Plan</title>
+  <title>{{ plan.name }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Gold Theme -->
+  <style>
+    .bg-gold { background-color: #c7a36b; }
+    .bg-gold:hover { background-color: #c7a36b; }
+    .text-gold { color: #c7a36b; }
+  </style>
 </head>
 
-<body class="bg-slate-50 text-slate-900">
+<body class="bg-slate-100 text-slate-900">
 
-<div class="plan-card">
-    <h2>{{ plan.name }}</h2>
+<!-- Header -->
+<header class="bg-slate-900">
+  <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+    <h1 class="text-white text-xl font-bold">PhotoShare</h1>
+    <a href="/" class="text-slate-300 hover:text-white text-sm">Home</a>
+  </div>
+</header>
 
-    <p class="price">₹{{ plan.price }}</p>
+<!-- Main Section -->
+<section class="min-h-[80vh] flex items-center justify-center">
+  <div class="bg-white rounded-2xl shadow-xl p-10 w-full max-w-md text-center">
 
-    <p><strong>Storage:</strong> {{ plan.storage }} GB</p>
-    <p><strong>Duration:</strong> {{ plan.duration }} months</p>
+    <!-- Plan Name -->
+    <h2 class="text-3xl font-bold mb-3">
+      {{ plan.name }}
+    </h2>
 
-    <a href="{{ url_for('razorpay_pay', plan_id=plan.id) }}"
-       class="text-purple-600 underline">
-        Proceed to Payment
+    <!-- Price -->
+    <p class="text-4xl font-bold text-gold mb-6">
+      ₹{{ plan.price }}
+    </p>
+
+    <!-- Plan Details -->
+    <ul class="space-y-3 text-slate-600 mb-8 text-lg">
+      <li>📦 Storage: <b>{{ plan.size }} GB</b></li>
+      <li>⏳ Duration: <b>{{ plan.duration }} days</b></li>
+    </ul>
+
+    <!-- Purchase Button -->
+    <a href="{{ url_for('purchase_plan', plan_id=plan.id) }}"
+       class="block w-full bg-gold text-white py-3 rounded-xl font-semibold text-lg transition">
+      Proceed to Payment
     </a>
 
-    <br><br>
-    <a href="{{ url_for('pricing') }}">← Back to pricing</a>
-</div>
+    <!-- Back Link -->
+    <a href="{{ url_for('upgrade_storage') }}"
+       class="block mt-6 text-slate-500 hover:text-slate-800">
+      ← Back to pricing
+    </a>
 
-</div>
+  </div>
+</section>
 
 </body>
 </html>

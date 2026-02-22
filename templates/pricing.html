@@ -2,196 +2,100 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Pricing | PhotoShare</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<title>Upgrade Plans</title>
 <style>
-:root {
-  --gold: #c7a36b;
-  --dark: #111;
-  --muted: #6b7280;
-  --bg: #f9fafb;
-}
-
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background: var(--bg);
-  color: var(--dark);
+    font-family: Arial, sans-serif;
+    background: #f9fafb;
+    margin: 0;
 }
 
 .container {
-  max-width: 1200px;
-  margin: auto;
-  padding: 80px 20px;
-  text-align: center;
+    max-width: 1100px;
+    margin: 60px auto;
+    text-align: center;
 }
 
 h1 {
-  font-size: 3rem;
-  margin-bottom: 12px;
+    margin-bottom: 40px;
 }
 
-.subtitle {
-  color: var(--muted);
-  font-size: 1.2rem;
-  margin-bottom: 60px;
+.plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 30px;
 }
 
-/* Pricing grid */
-.pricing-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 32px;
-}
-.pricing-btn {
-  display: inline-block;
-  background: #c7a36b;
-  color: white;
-  padding: 12px 28px;
-  border-radius: 999px;
-  text-decoration: none;
-  font-weight: 500;
-  transition: 0.3s;
-}
-
-.pricing-btn:hover {
-  background: #b8925a;
-  transform: translateY(-2px);
-}
-
-/* Card */
 .plan {
-  background: white;
-  border-radius: 20px;
-  padding: 40px 30px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.08);
-  transition: transform 0.3s ease;
+    background: white;
+    padding: 30px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.08);
 }
 
-.plan:hover {
-  transform: translateY(-8px);
+.plan h2 {
+    margin-bottom: 10px;
 }
 
-.plan.highlight {
-  border: 2px solid var(--gold);
-}
-
-.plan h3 {
-  font-size: 1.6rem;
-  margin-bottom: 10px;
-}
-
-.plan .price {
-  font-size: 2.4rem;
-  margin: 20px 0;
-  color: var(--gold);
-}
-
-.plan .price span {
-  font-size: 1rem;
-  color: var(--muted);
+.price {
+    font-size: 32px;
+    color: #c7a36b;
+    margin: 15px 0;
 }
 
 .features {
-  list-style: none;
-  padding: 0;
-  margin: 30px 0;
+    text-align: left;
+    margin: 20px 0;
+    color: #555;
 }
 
 .features li {
-  padding: 8px 0;
-  color: #374151;
+    margin-bottom: 8px;
 }
 
-.plan button {
-  background: var(--gold);
-  color: white;
-  border: none;
-  padding: 14px 30px;
-  border-radius: 999px;
-  font-size: 15px;
-  cursor: pointer;
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    background: #c7a36b;
+    color: white;
+    text-decoration: none;
+    border-radius: 999px;
+    margin-top: 15px;
 }
 
-.plan button:hover {
-  opacity: 0.9;
-}
-
-/* Footer note */
-.note {
-  margin-top: 60px;
-  font-size: 14px;
-  color: var(--muted);
+.btn:hover {
+    opacity: 0.9;
 }
 </style>
 </head>
-
 <body>
 
 <div class="container">
+    <h1>Choose Your Plan</h1>
 
-  <h1>Try it free, upgrade later.</h1>
-  <p class="subtitle">
-  "This price is for demonstration purposes only"
-  </p>
+    <div class="plans">
+      {% for plan in plans %}
+<div class="plan-card {% if loop.index == 2 %}featured{% endif %}">
+    <h3>{{ plan.name }}</h3>
 
-  <div class="pricing-grid">
-
-    <!-- Starter -->
-    <div class="plan">
-      <h3>Starter</h3>
-      <div class="price">Free <span>/ demo</span></div>
-      <ul class="features">
-        <li>✔ 1 Sample Gallery</li>
-        <li>✔ Public Gallery Sharing</li>
-        <li>✔ Photo Likes</li>
-        <li>✔ Mobile Friendly</li>
-      </ul>
-     <a href="{{ url_for('demo_gallery') }}" class="pricing-btn">
-    View Demo
-</a>
-
+    <div class="price">
+        ₹{{ plan.price }} <span>/month</span>
     </div>
 
-    <!-- Pro -->
-    <div class="plan highlight">
-      <h3>Professional</h3>
-      <div class="price">₹199 <span>/ sample</span></div>
-      <ul class="features">
-        <li>✔ Unlimited Galleries</li>
-        <li>✔ Client Favorites</li>
-        <li>✔ Downloads Enabled</li>
-      </ul>
-     <a href="{{ url_for('demo_gallery') }}" class="pricing-btn">
-    View Demo
+    <ul>
+        <li>{{ plan.storage_gb}} GB Storage</li>
+        <li>{{ plan.duration }} days</li>
+        <li>{{ plan.features }}</li>
+    </ul>
+
+    <a href="{{ url_for('subscribe_form', plan_id=plan.id) }}" class="btn">
+    Upgrade Now
 </a>
 
-    </div>
-
-    <!-- Studio -->
-    <div class="plan">
-      <h3>Studio</h3>
-      <div class="price">₹599 <span>/ sample</span></div>
-      <ul class="features">
-        <li>✔ Full Client Proofing</li>
-        <li>✔ Favorites Dashboard</li>
-        <li>✔ Gallery Analytics</li>
-        <li>✔ Admin Controls</li>
-      </ul>
-   <a href="{{ url_for('demo_gallery') }}" class="pricing-btn">
-    View Demo
-</a>
+</div>
+{% endfor %}
 
     </div>
-
-  </div>
-
-  <p class="note">
-    ⚠ This pricing section is for UI demonstration only.  
-    No real payments or subscriptions are active.
-  </p>
-
 </div>
 
 </body>

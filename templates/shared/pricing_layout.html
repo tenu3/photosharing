@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ page_title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+<header class="topbar">
+    <h2>PHOTOSHARE</h2>
+    <nav>
+        <a href="{{ url_for('client_dashboard') }}">Dashboard</a>
+        <a href="{{ url_for('homepage') }}">Homepage</a>
+    </nav>
+</header>
+
+<section class="pricing-section">
+    <h1>{{ page_title }}</h1>
+    <p class="subtitle">
+        Choose a plan that fits your growing photo business.
+    </p>
+
+    <div class="pricing-grid">
+        {% for plan in plans %}
+        <div class="plan-card {% if loop.index == 2 %}featured{% endif %}">
+            <h3>{{ plan.name }}</h3>
+            <div class="price">₹{{ plan.price }} <span>/month</span></div>
+
+            <ul>
+                <li>{{ plan.storage_gb }} GB Storage</li>
+                <li>{{ plan.features }}</li>
+            </ul>
+
+            <a href="{{ url_for('subscribe_form', plan_id=plan.id) }}" 
+               class="gold-btn">
+                Upgrade Now
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</section>
+
+</body>
+</html>

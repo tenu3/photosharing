@@ -173,21 +173,19 @@ def feature_deeplink(feature):
 @app.route("/pricing")
 def pricing():
     conn = mysql.connect()
-    cur = conn.cursor(pymysql.cursors.DictCursor)
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    cur.execute("""
-        SELECT id, name, price, storage, duration, is_recommended
-        FROM plans
-        WHERE status = 'Active'
-        ORDER BY price ASC
-    """)
-    plans = cur.fetchall()
+    cursor.execute("SELECT * FROM plans WHERE status='active' ORDER BY id")
+    plans = cursor.fetchall()
 
-    cur.close()
+    cursor.close()
     conn.close()
 
-    return render_template("pricing.html", plans=plans)
-
+    return render_template(
+        "client/plans.html",   # same template as client upgrade
+        plans=plans,
+        page_title="Choose Your Plan"
+    )
 
 @app.route("/examples")
 def examples_page():
@@ -231,7 +229,8 @@ def view_gallery(gallery_id):
 
     return render_template(
         "client/gallery.html",
-        gallery=gallery
+        gallery=gallery,
+        gallery_id=gallery_id
     )
 
 
@@ -570,10 +569,13 @@ def client_logout():
 @login_required("client")
 def client_dashboard():
     client_id = session["client_id"]
+
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    # --- Total Galleries ---
+    # ---------------------------
+    # Total Galleries
+    # ---------------------------
     cursor.execute("""
         SELECT COUNT(*) AS total
         FROM galleries
@@ -581,7 +583,9 @@ def client_dashboard():
     """, (client_id,))
     total_galleries = cursor.fetchone()["total"]
 
-    # --- Total Photos ---
+    # ---------------------------
+    # Total Photos
+    # ---------------------------
     cursor.execute("""
         SELECT COUNT(p.id) AS total
         FROM photos p
@@ -589,65 +593,71 @@ def client_dashboard():
         WHERE g.client_id = %s
     """, (client_id,))
     total_photos = cursor.fetchone()["total"]
-    
-# --- Total Favorites (likes) ---
+
+    # ---------------------------
+    # Total Favorites
+    # ---------------------------
     cursor.execute("""
-    SELECT COUNT(*) AS total
-    FROM photo_likes pl
-    JOIN photos p ON pl.photo_id = p.id
-    JOIN galleries g ON p.gallery_id = g.id
-    WHERE g.client_id = %s
-""", (client_id,))
+        SELECT COUNT(*) AS total
+        FROM photo_likes pl
+        JOIN photos p ON pl.photo_id = p.id
+        JOIN galleries g ON p.gallery_id = g.id
+        WHERE g.client_id = %s
+    """, (client_id,))
     total_favorites = cursor.fetchone()["total"]
 
-        
-        # --- GET CLIENT STORAGE PLAN ---
+    # ---------------------------
+    # Expire old subscriptions
+    # ---------------------------
     cursor.execute("""
-    SELECT p.storage_gb
-    FROM client_subscriptions cs
-    JOIN plans p ON cs.plan_id = p.id
-    WHERE cs.client_id = %s
-    ORDER BY cs.id DESC
-    LIMIT 1
+        UPDATE client_subscriptions
+        SET status='expired'
+        WHERE end_date < CURDATE()
+        AND client_id=%s
     """, (client_id,))
+    conn.commit()
 
-    plan = cursor.fetchone()
+    # ---------------------------
+    # Get ACTIVE plan
+    # ---------------------------
+    cursor.execute("""
+        SELECT cs.*, p.name, p.storage_gb
+        FROM client_subscriptions cs
+        JOIN plans p ON cs.plan_id = p.id
+        WHERE cs.client_id=%s
+        AND cs.status='active'
+        ORDER BY cs.end_date DESC
+        LIMIT 1
+    """, (client_id,))
+    current_plan = cursor.fetchone()
 
-    if plan:
-     total_storage_gb = plan["storage_gb"]
+    # ---------------------------
+    # STORAGE USED (⭐ FIXED)
+    # ---------------------------
+    cursor.execute("""
+        SELECT SUM(p.file_size) AS total_storage
+        FROM photos p
+        JOIN galleries g ON p.gallery_id = g.id
+        WHERE g.client_id = %s
+    """, (client_id,))
+    storage_data = cursor.fetchone()
+
+    total_storage_bytes = storage_data["total_storage"] or 0
+
+    # Convert bytes → GB
+    total_storage_gb = round(total_storage_bytes / (1024 * 1024 * 1024), 2)
+
+    # ---------------------------
+    # PLAN LIMIT + %
+    # ---------------------------
+    if current_plan and current_plan["storage_gb"]:
+        plan_limit_gb = current_plan["storage_gb"]
+        storage_percent = round(
+            (total_storage_gb / plan_limit_gb) * 100, 2
+        )
     else:
-       total_storage_gb = 5   # default if no plan
-
-# --- TOTAL STORAGE USED ---
-    cursor.execute("""
-    SELECT SUM(file_size) AS total_kb
-    FROM photos
-    WHERE client_id = %s
-""", (client_id,))
-    row = cursor.fetchone()
-
-    total_kb = row["total_kb"] if row["total_kb"] else 0
-
-# Convert KB → GB
-    used_gb = total_kb / (1024 * 1024)
-
-# Get plan storage
-    cursor.execute("""
-    SELECT p.storage_gb
-    FROM client_subscriptions cs
-    JOIN plans p ON cs.plan_id = p.id
-    WHERE cs.client_id = %s
-    ORDER BY cs.id DESC
-    LIMIT 1
-""", (client_id,))
-    plan = cursor.fetchone()
-
-    total_storage_gb = plan["storage_gb"] if plan else 5
-
-# Calculate percentage
-    percent_used = (used_gb / total_storage_gb) * 100 if total_storage_gb else 0
-
-
+        plan_limit_gb = 5  # fallback free limit
+        storage_percent = 0
 
     cursor.close()
     conn.close()
@@ -657,10 +667,11 @@ def client_dashboard():
         total_galleries=total_galleries,
         total_photos=total_photos,
         total_favorites=total_favorites,
-        used_gb=round(used_gb, 2),
         total_storage_gb=total_storage_gb,
-        percent_used=round(percent_used, 2)
+        plan_limit_gb=plan_limit_gb,
+        storage_percent=storage_percent
     )
+
 
 @app.route("/client/upgrade")
 @login_required("client")
@@ -674,20 +685,136 @@ def upgrade_storage():
     cursor.close()
     conn.close()
 
-    return render_template("client/upgrade.html", plans=plans)
+   
+    return render_template(
+        "client/plans.html",
+        plans=plans,
+        page_title="Upgrade your storage"
+    )
 
+from datetime import datetime, timedelta
 
-@app.route("/client/subscribe/<int:plan_id>")
+@app.route("/client/purchase/<int:plan_id>", methods=["GET", "POST"])
 @login_required("client")
-def subscribe_plan(plan_id):
+def purchase_plan(plan_id):
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    # Get plan details
+    cursor.execute("SELECT * FROM plans WHERE id=%s", (plan_id,))
+    plan = cursor.fetchone()
+
+    if not plan:
+        return "Plan not found", 404
+
+    # If user confirms purchase
+    if request.method == "POST":
+        client_id = session["client_id"]
+
+        start_date = datetime.today().date()
+        end_date = start_date + timedelta(days=plan["duration"])
+
+        cursor.execute("""
+            INSERT INTO client_subscriptions
+            (client_id, plan_id, start_date, end_date, status)
+            VALUES (%s, %s, %s, %s, 'active')
+        """, (client_id, plan_id, start_date, end_date))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return redirect(url_for("client_dashboard"))
+
+    cursor.close()
+    conn.close()
+
+    return render_template("client/purchase.html", plan=plan)
+
+
+from datetime import datetime, timedelta
+
+@app.route("/client/confirm_purchase", methods=["POST"])
+@login_required("client")
+def confirm_purchase():
+    client_id = session["client_id"]
+    plan_id = request.form["plan_id"]
+    card_name = request.form["card_name"]
+    card_number = request.form["card_number"]
+    exp_month = request.form["exp_month"]
+    exp_year = request.form["exp_year"]
+
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    # Get plan details
+    cursor.execute("SELECT * FROM plans WHERE id=%s", (plan_id,))
+    plan = cursor.fetchone()
+
+    start_date = datetime.today().date()
+    end_date = start_date + timedelta(days=plan["duration"])
+
+    # Insert subscription
+    cursor.execute("""
+        INSERT INTO client_subscriptions
+        (client_id, plan_id, start_date, end_date, status,
+         card_holder_name, card_number, expiry_month, expiry_year)
+        VALUES (%s, %s, %s, %s, 'active', %s, %s, %s, %s)
+    """, (
+        client_id, plan_id, start_date, end_date,
+        card_name, card_number, exp_month, exp_year
+    ))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return redirect(url_for("client_dashboard"))
+
+
+# -----------------------------
+# Step 1: Show confirmation form
+# -----------------------------
+@app.route("/subscribe/form/<int:plan_id>")
+@login_required("client")
+def subscribe_form(plan_id):
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    cursor.execute("SELECT * FROM plans WHERE id = %s", (plan_id,))
+    plan = cursor.fetchone()
+
+    cursor.close()
+    conn.close()
+
+    if not plan:
+        return "Plan not found", 404
+
+    return render_template("client/subscribe_form.html", plan=plan)
+
+
+# -----------------------------
+# Step 2: Confirm subscription
+# -----------------------------
+@app.route("/subscribe/confirm/<int:plan_id>", methods=["POST"])
+@login_required("client")
+def subscribe_confirm(plan_id):
     client_id = session["client_id"]
 
     conn = mysql.connect()
     cursor = conn.cursor()
 
+    # 1. Deactivate old plans
     cursor.execute("""
-        INSERT INTO client_subscriptions (client_id, plan_id)
-        VALUES (%s, %s)
+        UPDATE client_subscriptions
+        SET status='inactive'
+        WHERE client_id=%s
+    """, (client_id,))
+
+    # 2. Insert new active plan
+    cursor.execute("""
+        INSERT INTO client_subscriptions (client_id, plan_id, status)
+        VALUES (%s, %s, 'active')
     """, (client_id, plan_id))
 
     conn.commit()
@@ -696,6 +823,9 @@ def subscribe_plan(plan_id):
 
     flash("Plan upgraded successfully!", "success")
     return redirect(url_for("client_dashboard"))
+
+
+
 
 
 
@@ -901,7 +1031,7 @@ def manage_gallery(gallery_id):
         SELECT id, filename, original_name, photo_path, file_size, created_at
         FROM photos
         WHERE gallery_id = %s
-        ORDER BY created_at ASC
+       ORDER BY sort_order ASC, id ASC
     """, (gallery_id,))
     photos = cursor.fetchall()
 
@@ -925,9 +1055,10 @@ def public_gallery(gallery_id):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    # Get gallery
+    # ✅ get gallery
     cursor.execute("""
-        SELECT * FROM galleries
+        SELECT *
+        FROM galleries
         WHERE id = %s AND is_public = 1
     """, (gallery_id,))
     gallery = cursor.fetchone()
@@ -935,17 +1066,19 @@ def public_gallery(gallery_id):
     if not gallery:
         return "Gallery not found or private", 404
 
-    # Get photos
+    # ✅ get ONLY this gallery photos
     cursor.execute("""
-    SELECT p.*,
-           COUNT(l.id) AS likes
-    FROM photos p
-    LEFT JOIN photo_likes l ON p.id = l.photo_id
-    WHERE p.gallery_id=%s
-    GROUP BY p.id
+        SELECT p.*,
+               COUNT(l.id) AS likes
+        FROM photos p
+        LEFT JOIN photo_likes l ON p.id = l.photo_id
+        WHERE p.gallery_id=%s
+        GROUP BY p.id
+        ORDER BY p.created_at DESC
     """, (gallery_id,))
     photos = cursor.fetchall()
 
+    cursor.close()
     conn.close()
 
     return render_template(
@@ -953,7 +1086,6 @@ def public_gallery(gallery_id):
         gallery=gallery,
         photos=photos
     )
-
 @app.route("/client/preview-gallery/<int:gallery_id>/preview")
 @login_required("client")  # your custom decorator
 def preview_gallery(gallery_id):
@@ -990,7 +1122,7 @@ def preview_gallery(gallery_id):
         SELECT id, original_name, photo_path, filename
         FROM photos
         WHERE gallery_id = %s
-        ORDER BY created_at ASC
+       ORDER BY sort_order ASC, id ASC
     """, (gallery_id,))
     photos = cursor.fetchall()
 
@@ -1004,49 +1136,6 @@ def preview_gallery(gallery_id):
         is_preview_mode=True   # optional flag to show "Preview Mode" banner if you want
     )    
     #^^^^^^^^^^^^^^^^^^^^^^^^6
-@app.route("/gallery/<int:gallery_id>/view")
-def public_view_gallery(gallery_id):
-    conn = mysql.connect()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
-
-    # Fetch gallery details (no login required)
-    cursor.execute("""
-        SELECT id, title, description, cover_photo, is_public
-        FROM galleries
-        WHERE id = %s
-    """, (gallery_id,))
-    gallery = cursor.fetchone()
-
-    if not gallery:
-        cursor.close()
-        conn.close()
-        flash("Gallery not found.", "danger")
-        return redirect(url_for("home"))  # or any public landing page
-
-    # Only allow access if the gallery is public
-    if not gallery["is_public"]:
-        cursor.close()
-        conn.close()
-        flash("This gallery is private. Only the owner can view it.", "warning")
-        return redirect(url_for("home"))  # or show a nice "private" page
-
-    # Fetch photos
-    cursor.execute("""
-        SELECT id, original_name, photo_path, filename
-        FROM photos
-        WHERE gallery_id = %s
-        ORDER BY created_at ASC
-    """, (gallery_id,))
-    photos = cursor.fetchall()
-
-    cursor.close()
-    conn.close()
-
-    return render_template(
-        "public/gallery_view.html",
-        gallery=gallery,
-        photos=photos
-    )
 #========================================================
 @app.route("/client/collection/create", methods=["GET", "POST"])
 @login_required("client")
@@ -1247,6 +1336,7 @@ def gallery_photos(gallery_id):
     return render_template(
         "client/photos.html",
         gallery=gallery,
+        gallery_id=gallery_id,
         photos=photos
     )
 
@@ -1643,6 +1733,32 @@ def delete_gallery_confirm(gallery_id):
         "client/delete_gallery.html",
         gallery=gallery
     )
+    
+@app.route("/client/gallery/<int:gallery_id>/reorder", methods=["POST"])
+@login_required("client")
+def reorder_photos(gallery_id):
+    client_id = session["client_id"]
+    data = request.get_json()
+    order_list = data.get("order", [])
+
+    conn = mysql.connect()
+    cursor = conn.cursor()
+
+    for item in order_list:
+        cursor.execute("""
+            UPDATE photos p
+            JOIN galleries g ON p.gallery_id = g.id
+            SET p.sort_order = %s
+            WHERE p.id = %s AND g.client_id = %s
+        """, (item["position"], item["id"], client_id))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {"success": True}
+
+    
 @app.route("/client/photo/<int:photo_id>/like", methods=["POST"])
 @login_required("client")
 def toggle_like(photo_id):
@@ -1799,7 +1915,8 @@ def like_photo(photo_id):
 
 
 
-@app.route("/client/photo/delete/<int:photo_id>", methods=["POST"])
+import os
+@app.route("/client/photo/<int:photo_id>/delete", methods=["POST"])
 @login_required("client")
 def delete_photo(photo_id):
     client_id = session["client_id"]
@@ -1807,35 +1924,38 @@ def delete_photo(photo_id):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    # 1️⃣ Get photo (security check)
+    # ✅ verify ownership
     cursor.execute("""
-        SELECT photo_path
-        FROM photos
-        WHERE id=%s AND client_id=%s
+        SELECT p.photo_path, p.gallery_id
+        FROM photos p
+        JOIN galleries g ON p.gallery_id = g.id
+        WHERE p.id=%s AND g.client_id=%s
     """, (photo_id, client_id))
 
     photo = cursor.fetchone()
 
     if not photo:
-        cursor.close()
-        conn.close()
-        return {"success": False}, 404
+        flash("Photo not found.", "error")
+        return redirect(url_for("client_dashboard"))
 
-    # 2️⃣ Delete file from disk
-    file_path = os.path.join(app.root_path, "static", photo["photo_path"])
+    # ✅ delete file from disk
+    file_path = os.path.join("static", photo["photo_path"])
     if os.path.exists(file_path):
         os.remove(file_path)
 
-    # 3️⃣ Delete from DB
-    cursor.execute("""
-        DELETE FROM photos WHERE id=%s
-    """, (photo_id,))
-
+    # ✅ delete from DB
+    cursor.execute("DELETE FROM photos WHERE id=%s", (photo_id,))
     conn.commit()
+
+    gallery_id = photo["gallery_id"]
+
     cursor.close()
     conn.close()
 
-    return {"success": True}
+    flash("Photo deleted successfully.", "success")
+
+    # 🔥 IMPORTANT: return to SAME gallery manage page
+    return redirect(url_for("manage_gallery", gallery_id=gallery_id))
 
 
 
@@ -1848,11 +1968,8 @@ def plan_details(plan_id):
     conn = mysql.connect()
     cursor = conn.cursor(DictCursor)
 
-    cursor.execute("""
-        SELECT id, name, price, storage, duration
-        FROM plans
-        WHERE id = %s AND status = 'Active'
-    """, (plan_id,))
+      
+    cursor.execute("SELECT * FROM plans WHERE id=%s", (plan_id,))
     
     plan = cursor.fetchone()
 
@@ -2418,6 +2535,124 @@ def payment_success(plan_id):
 
     return redirect(url_for('client_dashboard'))
 
+import os
+import cv2
+import numpy as np
+import pymysql
+import functools
+from PIL import Image
+from flask import request, jsonify
 
+# ================================
+# Histogram cache (PERFORMANCE)
+# ================================
+@functools.lru_cache(maxsize=512)
+def get_histogram(image_path):
+    try:
+        db_img = Image.open(image_path).convert("RGB").resize((300, 300))
+        db_hist = cv2.calcHist(
+            [np.array(db_img)],
+            [0, 1, 2],
+            None,
+            [8, 8, 8],
+            [0, 256, 0, 256, 0, 256]
+        )
+        cv2.normalize(db_hist, db_hist)
+        return db_hist
+    except Exception:
+        return None
+
+
+# =================================
+# SEARCH SIMILAR IMAGES ROUTE
+# =================================
+@app.route("/gallery/<int:gallery_id>/search-similar", methods=["POST"])
+def search_similar(gallery_id):
+
+    # ---------- check upload ----------
+    if "image" not in request.files:
+        return jsonify({"success": False, "error": "No image uploaded"})
+
+    file = request.files["image"]
+
+    if file.filename == "":
+        return jsonify({"success": False, "error": "Empty file"})
+
+    # ---------- process query image safely ----------
+    try:
+        img = Image.open(file.stream).convert("RGB")
+        img = img.resize((300, 300))
+    except Exception:
+        return jsonify({"success": False, "error": "Invalid image file"})
+
+    query_hist = cv2.calcHist(
+        [np.array(img)],
+        [0, 1, 2],
+        None,
+        [8, 8, 8],
+        [0, 256, 0, 256, 0, 256]
+    )
+    cv2.normalize(query_hist, query_hist)
+
+    # ---------- DB ----------
+    conn = mysql.connect()
+    cur = conn.cursor(pymysql.cursors.DictCursor)
+
+    cur.execute("""
+        SELECT id, photo_path
+        FROM photos
+        WHERE gallery_id = %s
+    """, (gallery_id,))
+    photos = cur.fetchall()
+
+    results = []
+
+    # ---------- compare ----------
+    for photo in photos:
+        try:
+            full_path = os.path.join(
+                app.root_path,
+                "static",
+                photo["photo_path"]
+            )
+
+            if not os.path.exists(full_path):
+                continue
+
+            db_hist = get_histogram(full_path)
+            if db_hist is None:
+                continue
+
+            similarity = cv2.compareHist(
+                query_hist,
+                db_hist,
+                cv2.HISTCMP_CORREL
+            )
+
+            # ⭐ threshold (premium filtering)
+            if similarity > 0.6:
+                results.append({
+                    "id": photo["id"],
+                    "path": photo["photo_path"],
+                    "score": float(similarity)
+                })
+
+        except Exception as e:
+            print("Similarity error:", e)
+            continue
+
+    # ---------- sort best first ----------
+    results.sort(key=lambda x: x["score"], reverse=True)
+
+    # ---------- close DB (your style) ----------
+    conn.commit()
+    cur.close()
+    conn.close()
+
+    # ---------- response ----------
+    return jsonify({
+        "success": True,
+        "results": results[:12]  # top matches
+    })
 if __name__ == "__main__":
     app.run(debug=True,host='0.0.0.0')

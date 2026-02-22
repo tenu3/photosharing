@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Confirm Plan</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #f9fafb;
+            text-align: center;
+            padding: 60px;
+        }
+        .box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            display: inline-block;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+        }
+        .gold-btn {
+            background: #c7a36b;
+            color: white;
+            padding: 12px 28px;
+            border-radius: 999px;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="box">
+    <h2>{{ plan.name }}</h2>
+    <p><strong>₹{{ plan.price }}</strong></p>
+    <p>{{ plan.storage_gb }} GB storage</p>
+    <p>{{ plan.features }}</p>
+
+    <form method="POST" action="{{ url_for('subscribe_confirm', plan_id=plan.id) }}">
+        <button type="submit" class="gold-btn">
+            Confirm Upgrade
+        </button>
+    </form>
+</div>
+
+</body>
+</html>

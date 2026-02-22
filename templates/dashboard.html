@@ -90,10 +90,40 @@ h1 {
 .settings a:hover {
     color: #caa35c;
 }
+.flash-popup {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #c7a36b;
+    color: white;
+    padding: 14px 22px;
+    border-radius: 8px;
+    font-weight: 500;
+    box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    z-index: 9999;
+    animation: fadeOut 4s forwards;
+}
+
+@keyframes fadeOut {
+    0% {opacity: 1;}
+    80% {opacity: 1;}
+    100% {opacity: 0; display:none;}
+}
+
 </style>
 </head>
 
 <body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div id="flash-popup" class="flash-popup">
+      {% for category, message in messages %}
+        <p>{{ message }}</p>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
 
 <h1>Dashboard</h1>
 
@@ -122,6 +152,10 @@ h1 {
 
         <small>{{ total_storage_gb - storage_used_gb }} GB remaining out of {{ total_storage_gb }} GB</small>
     </div>
+<div class="stat-box">
+    <h3>Current Plan</hh3>
+    <p>{{ current_plan }}</p>
+</div>
 
 </div>
 

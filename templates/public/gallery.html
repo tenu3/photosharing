@@ -102,6 +102,143 @@ body {
   font-size: 13px;
   color: #6b7280;
 }
+/* ===== SLIDESHOW ===== */
+.slideshow-modal {
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at center, #111 0%, #000 80%);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.slide-image {
+  max-width: 92%;
+  max-height: 88vh;
+  border-radius: 16px;
+  box-shadow: 0 40px 120px rgba(0,0,0,.8);
+  transition: opacity .45s ease, transform .45s ease;
+}
+.close-slide {
+  position: absolute;
+  top: 26px;
+  right: 36px;
+  color: white;
+  font-size: 44px;
+  cursor: pointer;
+  opacity: .75;
+  transition: .25s;
+}
+
+.close-slide:hover {
+  opacity: 1;
+}
+
+/* navigation arrows */
+.slide-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 34px;
+  color: white;
+  background: rgba(255,255,255,.08);
+  border: none;
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: .25s;
+}
+
+.slide-arrow:hover {
+  background: #c7a36b;
+  color: black;
+}
+
+.arrow-left { left: 30px; }
+.arrow-right { right: 30px; }
+.slideshow-modal img {
+  max-width: 92%;
+  max-height: 88%;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+}
+
+.close-btn {
+  position: absolute;
+  top: 25px;
+  right: 35px;
+  color: white;
+  font-size: 40px;
+  cursor: pointer;
+}
+.similar-search {
+  text-align: center;
+  margin: 25px 0;
+}
+
+.upload-box {
+  display: inline-block;
+  background: #111;
+  color: white;
+  padding: 12px 26px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: .25s;
+}
+
+.upload-box:hover {
+  background: #c7a36b;
+  color: black;
+}
+.nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  color: white;
+  font-size: 48px;
+  cursor: pointer;
+  padding: 10px 18px;
+  user-select: none;
+}
+
+.nav.prev { left: 25px; }
+.nav.next { right: 25px; }
+/* ===== SLIDESHOW BAR ===== */
+.slideshow-bar {
+  display: flex;
+  justify-content: center;   /* ⭐ centers horizontally */
+  align-items: center;
+  margin: 30px 0 10px;
+}
+
+/* ===== BUTTON STYLE (Pixieset feel) ===== */
+.slideshow-btn {
+  background: #111;
+  color: white;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .25s ease;
+}
+
+.slideshow-btn:hover {
+  background: #c7a36b;
+  color: #000;
+  transform: translateY(-1px);
+}
+.main h1 {
+  text-align: center;
+}
+
+.gallery-header {
+  text-align: center;
+}
 </style>
 </head>
 
@@ -113,12 +250,26 @@ body {
   <span>Shared via PhotoShare</span>
 </div>
 
+<div class="slideshow-bar">
+  <button onclick="openSlideshow(0)" class="slideshow-btn">
+    ▶ Start Slideshow
+  </button>
+</div>
+<div class="similar-search">
+  <label class="upload-box">
+    🔍 Search Similar Images
+    <input type="file" id="similarInput" hidden accept="image/*">
+  </label>
+</div>
+
+<div id="similarResults" class="gallery"></div>
 <!-- GALLERY GRID -->
 <div class="gallery">
   {% for photo in photos %}
-    <img
-      src="{{ url_for('static', filename=photo.photo_path) }}"
-      onclick="openLightbox({{ loop.index0 }})">
+   <img
+  src="{{ url_for('static', filename=photo.photo_path) }}"
+  onclick="startSlideshow({{ loop.index0 }})"
+  class="gallery-img">
   {% endfor %}
 </div>
 
@@ -166,6 +317,115 @@ document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft") prev();
 });
 </script>
+<!-- ===== SLIDESHOW MODAL ===== -->
+<div id="slideshowModal" class="slideshow-modal">
+  
+  <span class="close-btn" onclick="closeSlideshow()">×</span>
 
+  <img id="slideImage" src="">
+
+  <div class="nav prev" onclick="changeSlide(-1)">❮</div>
+  <div class="nav next" onclick="changeSlide(1)">❯</div>
+
+</div>
+<script>
+const slideshowPhotos = [
+{% for photo in photos %}
+  "{{ url_for('static', filename=photo.photo_path) }}",
+{% endfor %}
+];
+</script>
+<script>
+let currentSlide = 0;
+let slideshowTimer = null;
+
+function openSlideshow(index) {
+  currentSlide = index;
+  document.getElementById("slideshowModal").style.display = "flex";
+  showSlide();
+  startAutoPlay();
+}
+
+function closeSlideshow() {
+  document.getElementById("slideshowModal").style.display = "none";
+  stopAutoPlay();
+}
+
+function showSlide() {
+  const img = document.getElementById("slideImage");
+  img.src = slideshowPhotos[currentSlide];
+}
+
+function changeSlide(step) {
+  currentSlide += step;
+
+  if (currentSlide >= slideshowPhotos.length) currentSlide = 0;
+  if (currentSlide < 0) currentSlide = slideshowPhotos.length - 1;
+
+  showSlide();
+  restartAutoPlay();
+}
+
+function startAutoPlay() {
+  slideshowTimer = setInterval(() => {
+    changeSlide(1);
+  }, 3000);
+}
+
+function stopAutoPlay() {
+  clearInterval(slideshowTimer);
+}
+
+function restartAutoPlay() {
+  stopAutoPlay();
+  startAutoPlay();
+}
+
+/* ===== Keyboard Support ===== */
+document.addEventListener("keydown", function(e) {
+  const modal = document.getElementById("slideshowModal");
+  if (modal.style.display !== "flex") return;
+
+  if (e.key === "ArrowRight") changeSlide(1);
+  if (e.key === "ArrowLeft") changeSlide(-1);
+  if (e.key === "Escape") closeSlideshow();
+});
+</script>
+<script>
+document.getElementById("similarInput")
+  .addEventListener("change", async function () {
+
+    const file = this.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const res = await fetch(
+      "/gallery/{{ gallery.id }}/search-similar",
+      { method: "POST", body: formData }
+    );
+
+    const data = await res.json();
+
+    const container = document.getElementById("similarResults");
+    container.innerHTML = "";
+
+    if (!data.success) {
+      container.innerHTML = "<p>No matches found</p>";
+      return;
+    }
+
+    data.results.forEach(p => {
+      const img = document.createElement("img");
+      img.src = "/static/" + p.path;
+      img.className = "gallery-img";
+      container.appendChild(img);
+    });
+
+    // 🔥 scroll to results
+    container.scrollIntoView({ behavior: "smooth" });
+});
+</script>
 </body>
 </html>

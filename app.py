@@ -2657,7 +2657,7 @@ def search_similar_faces(gallery_id):
             # =====================================
             # 🔥 SHOW ONLY 60–100% MATCHES
             # =====================================
-            if percent_score >= 10:
+            if percent_score >= 40:
                 results.append({
                     "id": photo["id"],
                     "path": photo["photo_path"],
@@ -2679,4 +2679,4 @@ def search_similar_faces(gallery_id):
         "results": results[:12]
     })
 if __name__ == "__main__":
-    app.run(debug=True,host='0.0.0.0')
+    app.run(debug=True)

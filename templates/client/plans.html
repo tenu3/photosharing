@@ -16,6 +16,154 @@
   .text-gold {
     color: #c7a36b;
   }
+  /* ===== SECTION ===== */
+.pricing-section {
+  padding: 70px 20px;
+  background: linear-gradient(180deg,#f8fafc,#eef2f7);
+  text-align: center;
+}
+
+.pricing-title {
+  font-size: 36px;
+  font-weight: 700;
+  margin-bottom: 50px;
+  color: #0f172a;
+}
+
+/* ===== GRID ===== */
+.pricing-grid {
+  max-width: 1200px;
+  margin: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
+  gap: 30px;
+}
+
+/* ===== CARD ===== */
+.pricing-card {
+  background: white;
+  border-radius: 20px;
+  padding: 35px 28px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+  position: relative;
+  transition: all .35s ease;
+}
+
+.pricing-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 25px 60px rgba(0,0,0,0.15);
+}
+
+/* ===== RECOMMENDED ===== */
+.pricing-card.recommended {
+  border: 2px solid #c7a36b;
+  transform: scale(1.04);
+}
+
+.badge {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #c7a36b;
+  color: white;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ===== TEXT ===== */
+.plan-name {
+  font-size: 22px;
+  margin-bottom: 15px;
+}
+
+.price {
+  font-size: 38px;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 25px;
+}
+
+.price span {
+  font-size: 14px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* ===== FEATURES ===== */
+.features {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 30px;
+  text-align: left;
+}
+
+.features li {
+  padding: 8px 0;
+  color: #334155;
+  font-size: 14px;
+}
+
+/* ===== STATUS COLORS ===== */
+.active { color: #16a34a; }
+.inactive { color: #dc2626; }
+
+/* ===== BUTTONS ===== */
+.actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.btn-outline {
+  border: 1px solid #0f172a;
+  color: #0f172a;
+  padding: 11px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: .25s;
+}
+
+.btn-outline:hover {
+  background: #0f172a;
+  color: white;
+}
+
+.btn-primary {
+  background: #c7a36b;
+  color: white;
+  padding: 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  transition: .25s;
+}
+
+.btn-primary:hover {
+  background: #b89355;
+}
+/* ===== FREE PLAN SPECIAL ===== */
+.pricing-card.free-plan {
+  border: 2px solid #22c55e;
+  background: linear-gradient(180deg,#ffffff,#f0fdf4);
+  transform: scale(1.04);
+}
+
+.pricing-card.free-plan .price {
+  color: #16a34a;
+  font-weight: 900;
+}
+
+.free-btn {
+  background: #22c55e !important;
+}
+
+.free-btn:hover {
+  background: #16a34a !important;
+}
 </style>
 
 
@@ -30,64 +178,44 @@
   </div>
 </header>
 
-<section class="py-16">
+<section class="pricing-section">
   <div class="max-w-7xl mx-auto px-6">
-
-    <h2 class="text-4xl font-bold text-center mb-12 text-slate-800">
-      Subscription Plans
-    </h2>
-
-    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-
-      {% for plan in plans %}
-      <div class="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition transform hover:-translate-y-2 duration-300 p-8 border border-slate-200">
-
-        <!-- Plan Name -->
-        <h3 class="text-2xl font-semibold mb-2 text-slate-800">
-          {{ plan.name }}
-        </h3>
-
+<h2 class="text-4xl font-bold text-center mb-12 text-slate-800"> Subscription Plans </h2>
+ <div class="pricing-grid"> {% for plan in plans %} 
+  <div class="pricing-card {% if plan.is_recommended or plan.price == 0 %}recommended{% endif %} {% if plan.price == 0 %}free-plan{% endif %}"> 
+    <!-- BADGE --> {% if plan.price == 0 %} 
+     <div class="badge">🆓 Free Plan</div>
+      {% elif plan.is_recommended %} <div class="badge">⭐ Recommended</div>
+       {% endif %} 
+       <!-- Plan Name --> 
+        <h3 class="text-2xl font-semibold mb-2 text-slate-800"> {{ plan.name }} 
+       </h3>
         <!-- Price -->
-       <p class="text-3xl font-bold text-gold mb-4">
-
-          ₹{{ plan.price }}
-          <span class="text-sm text-slate-500">/ plan</span>
-        </p>
-
-        <!-- Details -->
-        <ul class="space-y-2 text-slate-600 mb-6">
-          <li>📦 Storage: <b>{{ plan.size }} GB</b></li>
-          <li>⏳ Duration: <b>{{ plan.duration }} days</b></li>
-          <li>
-            🔖 Status:
-            {% if plan.status == 'active' %}
-              <span class="text-green-600 font-semibold">Active</span>
-            {% else %}
-              <span class="text-red-600 font-semibold">Inactive</span>
-            {% endif %}
-          </li>
-        </ul>
-
-        <!-- Buttons -->
-        <div class="space-y-3">
-     <a href="{{ url_for('plan_details', plan_id=plan.id) }}"
-   class="block text-center border border-slate-800 text-slate-800 py-2 rounded-xl font-semibold hover:bg-slate-800 hover:text-white transition">
-  View Plan
+          <div class="price"> ₹{{ "%.2f"|format(plan.price) }}
+             <span>/ plan</span>
+             </div>
+              <!-- Features --> 
+               <ul class="features">
+                 <li>📦 Storage: <strong>{{ plan.storage }} GB</strong></li>
+                  <li>⏳ Duration: <strong>{{ plan.duration }} days</strong></li> 
+                  <li>
+                     🔖 Status:
+                      <strong class="{{ 'active' if plan.status=='active' else 'inactive' }}"> 
+                        {{ plan.status|capitalize }} </strong>
+                       </li> 
+                      </ul>
+                       <!-- Buttons --> 
+                        <div class="actions">
+                           <a href="{{ url_for('plan_details', plan_id=plan.id) }}"
+                            class="btn-outline">View Plan</a> 
+                           <a href="{{ url_for('activate_plan', plan_id=plan.id) }}"
+   class="btn-primary">
+   Activate Plan
 </a>
-
-
-<a href="{{ url_for('purchase_plan', plan_id=plan.id) }}"
-   class="block text-center bg-gold text-white py-3 rounded-xl font-semibold hover:bg-[#b8962e] transition">
-  Purchase Plan
-</a>
-
-
-        </div>
-
-      </div>
-      {% endfor %}
-
-    </div>
+                          </div>
+                         </div> 
+                         {% endfor %}
+                         </div>
   </div>
 </section>
 

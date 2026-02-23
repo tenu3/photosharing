@@ -98,9 +98,9 @@ def homepage():
 
     # Plans (already working)
     cursor.execute("""
-        SELECT id, name, price, storage, duration
+        SELECT id, name, price,storage, duration
         FROM plans
-        WHERE status = 'Active'
+        WHERE status = 'active'
     """)
     plans = cursor.fetchall()
 
@@ -293,7 +293,50 @@ def public_like(photo_id):
         cursor.close()
         conn.close()
 
+# ===============================
+# FAVORITE TOGGLE (PUBLIC)
+# ===============================
+@app.route("/favorite/toggle", methods=["POST"])
+def toggle_favorite():
+    data = request.get_json()
 
+    photo_id = data.get("photo_id")
+    email = data.get("email")
+
+    if not photo_id or not email:
+        return {"success": False, "error": "Missing data"}, 400
+
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    # 🔍 check if already exists
+    cursor.execute("""
+        SELECT id FROM favorites
+        WHERE photo_id=%s AND email=%s
+    """, (photo_id, email))
+
+    existing = cursor.fetchone()
+
+    if existing:
+        # ❌ remove favorite (toggle off)
+        cursor.execute("""
+            DELETE FROM favorites
+            WHERE id=%s
+        """, (existing["id"],))
+        action = "removed"
+    else:
+        # ✅ add favorite
+        cursor.execute("""
+            INSERT INTO favorites (photo_id, email)
+            VALUES (%s, %s)
+        """, (photo_id, email))
+        action = "added"
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    return {"success": True, "action": action}
 
 @app.route("/photo/<int:photo_id>/download")
 def download_photo(photo_id):
@@ -317,6 +360,30 @@ def download_photo(photo_id):
         download_name=photo["original_name"]
     )
 
+# ===============================
+# VERIFY DOWNLOAD PIN
+# ===============================
+@app.route("/gallery/<int:gallery_id>/verify-download", methods=["POST"])
+def verify_download(gallery_id):
+    data = request.get_json()
+    pin = data.get("pin")
+
+    conn = mysql.connect()
+    cur = conn.cursor(pymysql.cursors.DictCursor)
+
+    cur.execute(
+        "SELECT download_pin FROM galleries WHERE id=%s",
+        (gallery_id,)
+    )
+    gallery = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if gallery and gallery["download_pin"] == pin:
+        return jsonify({"success": True})
+    else:
+        return jsonify({"success": False})
 
 
 # ────────────────────────────────────────────────
@@ -743,37 +810,46 @@ from datetime import datetime, timedelta
 @login_required("client")
 def confirm_purchase():
     client_id = session["client_id"]
-    plan_id = request.form["plan_id"]
-    card_name = request.form["card_name"]
-    card_number = request.form["card_number"]
-    exp_month = request.form["exp_month"]
-    exp_year = request.form["exp_year"]
+    plan_id = request.form.get("plan_id")
+
+    if not plan_id:
+        flash("Invalid plan.", "danger")
+        return redirect(url_for("pricing"))
 
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    # Get plan details
+    # 🔥 get plan
     cursor.execute("SELECT * FROM plans WHERE id=%s", (plan_id,))
     plan = cursor.fetchone()
+
+    if not plan:
+        conn.close()
+        flash("Plan not found.", "danger")
+        return redirect(url_for("pricing"))
 
     start_date = datetime.today().date()
     end_date = start_date + timedelta(days=plan["duration"])
 
-    # Insert subscription
+    # 🔥 deactivate old plans
+    cursor.execute("""
+        UPDATE client_subscriptions
+        SET status='expired'
+        WHERE client_id=%s
+    """, (client_id,))
+
+    # 🔥 insert new active plan
     cursor.execute("""
         INSERT INTO client_subscriptions
-        (client_id, plan_id, start_date, end_date, status,
-         card_holder_name, card_number, expiry_month, expiry_year)
-        VALUES (%s, %s, %s, %s, 'active', %s, %s, %s, %s)
-    """, (
-        client_id, plan_id, start_date, end_date,
-        card_name, card_number, exp_month, exp_year
-    ))
+        (client_id, plan_id, start_date, end_date, status)
+        VALUES (%s, %s, %s, %s, 'active')
+    """, (client_id, plan_id, start_date, end_date))
 
     conn.commit()
     cursor.close()
     conn.close()
 
+    flash("🎉 Plan activated successfully!", "success")
     return redirect(url_for("client_dashboard"))
 
 
@@ -969,7 +1045,7 @@ def manage_gallery(gallery_id):
                     file.save(save_path)
                     relative_path = f"/{save_path.replace(os.sep, '/')}"
 
-                    file_size_kb = os.path.getsize(save_path) // 1024
+                    file_size_bytes = os.path.getsize(save_path) // 1024
 
                     cursor.execute("""
                         INSERT INTO photos
@@ -981,7 +1057,7 @@ def manage_gallery(gallery_id):
                         os.path.basename(save_path),   # may include counter suffix
                         file.filename,                 # original name from user
                         relative_path,
-                        file_size_kb,
+                        file_size_bytes,
                         datetime.now()
                     ))
                     uploaded_count += 1
@@ -1300,7 +1376,7 @@ def create_gallery():
         conn.commit()
         conn.close()
 
-        return redirect(url_for("client_galleries"))
+        return redirect(url_for("manage_galleries"))
 
     return render_template("client/create-gallery.html")
 
@@ -1510,7 +1586,6 @@ def upload_photos_page(gallery_id):
         "client/upload_photos.html",
         gallery=gallery
     )
-
 @app.route("/client/gallery/<int:gallery_id>/upload", methods=["POST"])
 @login_required("client")
 def upload_photos(gallery_id):
@@ -1519,40 +1594,90 @@ def upload_photos(gallery_id):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
+    # ✅ verify gallery ownership
     cursor.execute(
         "SELECT * FROM galleries WHERE id=%s AND client_id=%s",
         (gallery_id, client_id)
     )
     gallery = cursor.fetchone()
+
     if not gallery:
+        cursor.close()
+        conn.close()
         return "Gallery not found", 404
 
     files = request.files.getlist("photos")
+
     if not files:
+        cursor.close()
+        conn.close()
+        flash("No files selected", "warning")
         return redirect(url_for("manage_gallery", gallery_id=gallery_id))
 
-    gallery_folder = os.path.join(UPLOAD_ROOT, str(gallery_id))
+    # ✅ create gallery folder
+    gallery_folder = os.path.join("static", "uploads", "galleries", str(gallery_id))
     os.makedirs(gallery_folder, exist_ok=True)
 
+    uploaded_count = 0
+
     for file in files:
-        if file.filename == "":
+        try:
+            if file.filename == "":
+                continue
+
+            if not allowed_file(file.filename):
+                continue
+
+            # ✅ secure filename
+            filename = secure_filename(file.filename)
+
+            save_path = os.path.join(gallery_folder, filename)
+
+            # ✅ avoid overwrite
+            base, ext = os.path.splitext(filename)
+            counter = 1
+            while os.path.exists(save_path):
+                filename = f"{base}_{counter}{ext}"
+                save_path = os.path.join(gallery_folder, filename)
+                counter += 1
+
+            # ✅ save file
+            file.save(save_path)
+
+            # ✅ IMPORTANT — STORE BYTES (NOT KB)
+            file_size_bytes = os.path.getsize(save_path)
+
+            # ✅ relative path for browser
+            photo_path = f"uploads/galleries/{gallery_id}/{filename}"
+
+            # ✅ insert into DB
+            cursor.execute("""
+                INSERT INTO photos
+                (client_id, gallery_id, filename, original_name, photo_path, file_size, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                client_id,
+                gallery_id,
+                filename,
+                file.filename,
+                photo_path,
+                file_size_bytes,   # ⭐ CRITICAL
+                datetime.now()
+            ))
+
+            uploaded_count += 1
+
+        except Exception as e:
+            print("Upload error:", e)
             continue
 
-        filename = secure_filename(file.filename)
-        save_path = os.path.join(gallery_folder, filename)
-        file.save(save_path)
-
-        # 🔥 STORE RELATIVE PATH (for browser)
-        photo_path = f"uploads/galleries/{gallery_id}/{filename}"
-
-        cursor.execute("""
-            INSERT INTO photos (client_id, gallery_id, photo_path, original_name)
-            VALUES (%s, %s, %s, %s)
-        """, (client_id, gallery_id, photo_path, filename))
-
+    # ✅ commit once after loop
     conn.commit()
+
+    cursor.close()
     conn.close()
 
+    flash(f"{uploaded_count} photo(s) uploaded successfully.", "success")
     return redirect(url_for("manage_gallery", gallery_id=gallery_id))
 
 @app.route("/client/gallery/<int:gallery_id>/upload-from-url", methods=["POST"])
@@ -1818,30 +1943,28 @@ def toggle_like(photo_id):
         "count": count
     })
 
-
 @app.route("/client/favorites")
 @login_required("client")
-def favorites_page():
+def client_favorites():
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    client_id = session.get("client_id")
-    email = session.get("favorite_email")
-
     cursor.execute("""
-        SELECT photos.*
-        FROM favorites
-        JOIN photos ON photos.id = favorites.photo_id
-        WHERE favorites.client_id=%s OR favorites.email=%s
-        ORDER BY favorites.created_at DESC
-    """, (client_id, email))
+        SELECT f.*, p.photo_path
+        FROM favorites f
+        JOIN photos p ON f.photo_id = p.id
+        ORDER BY f.created_at DESC
+    """)
 
-    photos = cursor.fetchall()
+    favorites = cursor.fetchall()
 
     cursor.close()
     conn.close()
 
-    return render_template("client/favorites.html", photos=photos)
+    return render_template(
+        "client/favorites.html",
+        favorites=favorites
+    )
 
 @app.route("/client/check-favorite-session")
 def check_favorite_session():
@@ -1994,9 +2117,9 @@ def client_checkout(plan_id):
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
     cursor.execute("""
-        SELECT id, name, price, storage, duration
+        SELECT id, name, price,storage, duration
         FROM plans
-        WHERE id = %s AND status = 'Active'
+        WHERE id = %s AND status = 'active'
     """, (plan_id,))
     plan = cursor.fetchone()
 
@@ -2036,11 +2159,47 @@ def activate_free_plan(plan_id):
     flash("🎉 Free plan activated!", "success")
     return redirect(url_for("client_dashboard"))
 
-
-@app.route("/client/activate-free/<int:plan_id>")
+@app.route("/client/activate-plan/<int:plan_id>")
 @login_required("client")
-def activate_free_plan_route(plan_id):
-    return activate_free_plan(plan_id)
+def activate_plan(plan_id):
+    client_id = session["client_id"]
+
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    # ✅ get plan
+    cursor.execute("SELECT * FROM plans WHERE id=%s", (plan_id,))
+    plan = cursor.fetchone()
+
+    if not plan:
+        cursor.close()
+        conn.close()
+        flash("Plan not found", "danger")
+        return redirect(url_for("pricing"))
+
+    start_date = datetime.today().date()
+    end_date = start_date + timedelta(days=plan["duration"])
+
+    # ✅ deactivate old subscriptions
+    cursor.execute("""
+        UPDATE client_subscriptions
+        SET status='expired'
+        WHERE client_id=%s AND status='active'
+    """, (client_id,))
+
+    # ✅ insert new active subscription
+    cursor.execute("""
+        INSERT INTO client_subscriptions
+        (client_id, plan_id, start_date, end_date, status)
+        VALUES (%s, %s, %s, %s, 'active')
+    """, (client_id, plan_id, start_date, end_date))
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+    flash("🎉 Plan activated successfully!", "success")
+    return redirect(url_for("client_dashboard"))
 
 
 @app.route("/client/pay/razorpay/<int:plan_id>")

@@ -5,171 +5,210 @@
 <title>{{ gallery.title }} | PhotoShare</title>
 
 <style>
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #fff;
-  color: #111;
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+  background:#fff;
+  color:#111;
 }
 
 /* HEADER */
-.header {
-  padding: 30px 20px;
-  text-align: center;
-  border-bottom: 1px solid #eee;
+.header{
+  padding:30px 20px;
+  text-align:center;
+  border-bottom:1px solid #eee;
 }
 
-.header h1 {
-  margin: 0;
-  font-size: 32px;
+.header h1{
+  margin:0;
+  font-size:32px;
 }
 
-.header span {
-  font-size: 13px;
-  color: #6b7280;
+/* SLIDESHOW BAR */
+.slideshow-bar{
+  display:flex;
+  justify-content:center;
+  margin:25px 0 10px;
+}
+
+.slideshow-btn{
+  background:#111;
+  color:white;
+  border:none;
+  padding:12px 28px;
+  border-radius:999px;
+  cursor:pointer;
+  font-weight:600;
+  transition:.25s;
+}
+
+.slideshow-btn:hover{
+  background:#c7a36b;
+  color:black;
 }
 
 /* GRID */
-.gallery {
-  max-width: 1400px;
-  margin: 40px auto;
-  padding: 0 20px;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 22px;
+.gallery{
+  max-width:1400px;
+  margin:40px auto;
+  padding:0 20px;
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+  gap:22px;
 }
 
-.gallery img {
-  width: 100%;
-  height: 220px;
-  object-fit: cover;
-  border-radius: 14px;
-  cursor: pointer;
-  transition: transform .25s ease;
+/* CARD */
+.photo-card{
+  position:relative;
+  overflow:hidden;
+  border-radius:14px;
 }
 
-.gallery img:hover {
-  transform: scale(1.03);
+.photo-card img{
+  width:100%;
+  height:220px;
+  object-fit:cover;
+  cursor:pointer;
+  transition:.25s;
+}
+
+.photo-card:hover img{
+  transform:scale(1.05);
+}
+
+/* ❤️ FAVORITE */
+.fav-btn{
+  position:absolute;
+  bottom:10px;
+  right:10px;
+  background:rgba(0,0,0,.6);
+  color:white;
+  border:none;
+  border-radius:50%;
+  padding:8px 10px;
+  cursor:pointer;
+  font-size:14px;
 }
 
 /* SIMILAR SEARCH */
-.similar-search {
-  text-align: center;
-  margin: 25px 0;
+.similar-search{
+  text-align:center;
+  margin:25px 0;
 }
 
-.upload-box {
-  display: inline-block;
-  background: #111;
-  color: white;
-  padding: 12px 26px;
-  border-radius: 999px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: .25s;
-}
-
-.upload-box:hover {
-  background: #c7a36b;
-  color: black;
+.upload-box{
+  display:inline-block;
+  background:#111;
+  color:white;
+  padding:12px 26px;
+  border-radius:999px;
+  cursor:pointer;
 }
 
 /* RESULT CARD */
-.similar-card {
-  position: relative;
+.similar-card{
+  position:relative;
 }
 
-/* SCORE BADGE */
-.score-badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  color: white;
-  padding: 6px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  backdrop-filter: blur(6px);
-  box-shadow: 0 4px 14px rgba(0,0,0,0.25);
+.score-badge{
+  position:absolute;
+  top:10px;
+  left:10px;
+  color:white;
+  padding:6px 10px;
+  border-radius:999px;
+  font-size:12px;
+  font-weight:600;
 }
 
-/* SLIDESHOW BUTTON */
-.slideshow-bar {
-  display: flex;
-  justify-content: center;
-  margin: 30px 0 10px;
+/* MODAL */
+.slideshow-modal{
+  position:fixed;
+  inset:0;
+  background:radial-gradient(circle,#111,#000);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
 }
 
-.slideshow-btn {
-  background: #111;
-  color: white;
-  border: none;
-  padding: 12px 28px;
-  border-radius: 999px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: .25s;
+.slideshow-modal img{
+  max-width:92%;
+  max-height:88%;
+  border-radius:12px;
 }
 
-.slideshow-btn:hover {
-  background: #c7a36b;
-  color: #000;
+.close-btn{
+  position:absolute;
+  top:25px;
+  right:35px;
+  color:white;
+  font-size:40px;
+  cursor:pointer;
 }
 
-/* SLIDESHOW MODAL */
-.slideshow-modal {
-  position: fixed;
-  inset: 0;
-  background: radial-gradient(circle at center, #111 0%, #000 80%);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
+.nav{
+  position:absolute;
+  top:50%;
+  transform:translateY(-50%);
+  color:white;
+  font-size:48px;
+  cursor:pointer;
 }
 
-.slideshow-modal img {
-  max-width: 92%;
-  max-height: 88%;
-  border-radius: 12px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+.nav.prev{ left:25px; }
+.nav.next{ right:25px; }
+
+.footer{
+  text-align:center;
+  padding:30px;
+  font-size:13px;
+  color:#6b7280;
+}
+/* ACTION BAR — hidden by default */
+.action-bar{
+  position:absolute;
+  top:10px;
+  right:10px;
+  display:flex;
+  gap:6px;
+
+  opacity:0;
+  transform:translateY(-6px);
+  transition:.25s ease;
 }
 
-.close-btn {
-  position: absolute;
-  top: 25px;
-  right: 35px;
-  color: white;
-  font-size: 40px;
-  cursor: pointer;
+/* ⭐ SHOW ON HOVER (Pixieset style) */
+.photo-card:hover .action-bar{
+  opacity:1;
+  transform:translateY(0);
 }
 
-.nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  color: white;
-  font-size: 48px;
-  cursor: pointer;
-  padding: 10px 18px;
+/* optional soft image zoom */
+.photo-card:hover img{
+  transform:scale(1.03);
 }
 
-.nav.prev { left: 25px; }
-.nav.next { right: 25px; }
 
-/* LOADING */
-.loading {
-  text-align: center;
-  color: #666;
-  padding: 30px;
-  font-size: 14px;
+/* button style */
+.icon-btn{
+  background:rgba(0,0,0,.65);
+  color:white;
+  border:none;
+  border-radius:50%;
+  width:34px;
+  height:34px;
+  cursor:pointer;
+  font-size:14px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:.25s;
 }
 
-/* FOOTER */
-.footer {
-  text-align: center;
-  padding: 30px;
-  font-size: 13px;
-  color: #6b7280;
+.icon-btn:hover{
+  background:#c7a36b;
+  color:black;
 }
 </style>
 </head>
@@ -182,7 +221,7 @@ body {
   <span>Shared via PhotoShare</span>
 </div>
 
-<!-- SLIDESHOW -->
+<!-- ✅ SLIDESHOW BUTTON -->
 <div class="slideshow-bar">
   <button onclick="openSlideshow(0)" class="slideshow-btn">
     ▶ Start Slideshow
@@ -197,17 +236,47 @@ body {
   </label>
 </div>
 
-<!-- RESULTS -->
+<!-- SIMILAR RESULTS -->
 <div id="similarResults" class="gallery"></div>
 
-<!-- GALLERY GRID -->
+<!-- ✅ MAIN GALLERY -->
 <div class="gallery">
-  {% for photo in photos %}
-  <img
-    src="{{ url_for('static', filename=photo.photo_path) }}"
-    onclick="openSlideshow({{ loop.index0 }})"
-    class="gallery-img">
-  {% endfor %}
+{% for photo in photos %}
+  <div class="photo-card">
+
+    <img
+      src="{{ url_for('static', filename=photo.photo_path) }}"
+      onclick="openSlideshow({{ loop.index0 }})"
+    >
+
+    <!-- ⭐ ACTION BUTTONS -->
+    <div class="action-bar">
+
+      <!-- ❤️ FAVORITE -->
+      <button class="icon-btn"
+         onclick="event.stopPropagation(); toggleFavorite({{ photo.id }})"
+        title="Favorite">
+        ❤️
+      </button>
+
+      <!-- ⬇ DOWNLOAD -->
+      <button class="icon-btn"
+        onclick="downloadPhoto('{{ url_for('static', filename=photo.photo_path) }}')"
+        title="Download">
+        ⬇
+      </button>
+
+      <!-- 🔗 SHARE -->
+      <button class="icon-btn"
+         onclick="sharePhoto('{{ url_for('static', filename=photo.photo_path) }}')"
+        title="Share">
+        🔗
+      </button>
+
+    </div>
+
+  </div>
+{% endfor %}
 </div>
 
 <!-- SLIDESHOW MODAL -->
@@ -224,91 +293,176 @@ body {
 
 <script>
 /* ================= SLIDESHOW ================= */
+
 let slideshowPhotos = [
 {% for photo in photos %}
-  "{{ url_for('static', filename=photo.photo_path) }}",
+"{{ url_for('static', filename=photo.photo_path) }}",
 {% endfor %}
 ];
 
 let currentSlide = 0;
+let slideshowTimer = null;
+let isPlaying = false;
 
-function openSlideshow(index) {
-  currentSlide = index;
-  document.getElementById("slideshowModal").style.display = "flex";
+function openSlideshow(index=0){
+  currentSlide=index;
+  document.getElementById("slideshowModal").style.display="flex";
+  showSlide();
+  startAutoPlay();
+}
+
+function closeSlideshow(){
+  document.getElementById("slideshowModal").style.display="none";
+  stopAutoPlay();
+}
+
+function showSlide(){
+  document.getElementById("slideImage").src =
+    slideshowPhotos[currentSlide];
+}
+
+function changeSlide(step){
+  currentSlide =
+    (currentSlide + step + slideshowPhotos.length) %
+    slideshowPhotos.length;
   showSlide();
 }
 
-function closeSlideshow() {
-  document.getElementById("slideshowModal").style.display = "none";
+/* AUTOPLAY */
+function startAutoPlay(){
+  stopAutoPlay();
+  isPlaying=true;
+
+  slideshowTimer=setInterval(()=>{
+    currentSlide =
+      (currentSlide+1)%slideshowPhotos.length;
+    showSlide();
+  },3000);
 }
 
-function showSlide() {
-  document.getElementById("slideImage").src = slideshowPhotos[currentSlide];
+function stopAutoPlay(){
+  if(slideshowTimer){
+    clearInterval(slideshowTimer);
+    slideshowTimer=null;
+  }
 }
 
-function changeSlide(step) {
-  currentSlide = (currentSlide + step + slideshowPhotos.length) % slideshowPhotos.length;
-  showSlide();
-}
+/* KEYBOARD */
+document.addEventListener("keydown",function(e){
+  const modal=document.getElementById("slideshowModal");
+  if(modal.style.display!=="flex") return;
+
+  if(e.key==="ArrowRight") changeSlide(1);
+  if(e.key==="ArrowLeft") changeSlide(-1);
+  if(e.key==="Escape") closeSlideshow();
+});
 
 /* ================= SIMILAR SEARCH ================= */
+
 document.getElementById("similarInput")
-  .addEventListener("change", async function () {
+.addEventListener("change",async function(){
 
-    const file = this.files[0];
-    if (!file) return;
+  const file=this.files[0];
+  if(!file) return;
 
-    const container = document.getElementById("similarResults");
-    container.innerHTML = "<div class='loading'>🔎 Finding best matches...</div>";
+  const container=document.getElementById("similarResults");
+  container.innerHTML="<div class='loading'>🔎 Finding best matches...</div>";
 
-    const formData = new FormData();
-    formData.append("image", file);
+  const formData=new FormData();
+  formData.append("image",file);
 
-    const res = await fetch(
-      "/gallery/{{ gallery.id }}/search-similar",
-      { method: "POST", body: formData }
-    );
+  const res=await fetch(
+    "/gallery/{{ gallery.id }}/search-similar",
+    {method:"POST",body:formData}
+  );
 
-    const data = await res.json();
-    container.innerHTML = "";
+  const data=await res.json();
+  container.innerHTML="";
 
-    if (!data.success || data.results.length === 0) {
-      container.innerHTML =
-        "<p style='text-align:center;color:#666'>No similar images found</p>";
-      return;
-    }
+  if(!data.success || data.results.length===0){
+    container.innerHTML="<p style='text-align:center;color:#666'>No similar images found</p>";
+    return;
+  }
 
-    /* 🔥 IMPORTANT: use results as slideshow source */
-    slideshowPhotos = data.results.map(p => "/static/" + p.path);
+  /* ⭐ IMPORTANT FIX */
+  slideshowPhotos = data.results.map(p=>"/static/"+p.path);
 
-    data.results.forEach((p, index) => {
-      const wrapper = document.createElement("div");
-      wrapper.className = "similar-card";
+  data.results.forEach((p,index)=>{
+    const wrapper=document.createElement("div");
+    wrapper.className="photo-card";
 
-      const img = document.createElement("img");
-      img.src = "/static/" + p.path;
-      img.className = "gallery-img";
-      img.onclick = () => openSlideshow(index);
+    const img=document.createElement("img");
+    img.src="/static/"+p.path;
+    img.onclick=()=>openSlideshow(index);
 
-      const badge = document.createElement("div");
+    const badge=document.createElement("div");
+    badge.className="score-badge";
 
-      const percent = Math.round(p.score);
+    const percent=Math.round(p.score);
+    let color="#dc2626";
+    if(percent>=95) color="#16a34a";
+    else if(percent>=85) color="#ca8a04";
 
-      let color = "#dc2626";
-      if (percent >= 95) color = "#16a34a";
-      else if (percent >= 85) color = "#ca8a04";
+    badge.style.background=color;
+    badge.innerText=percent+"% match";
 
-      badge.className = "score-badge";
-      badge.style.background = color;
-      badge.innerText = percent + "% match";
+    wrapper.appendChild(img);
+    wrapper.appendChild(badge);
+    container.appendChild(wrapper);
+  });
 
-      wrapper.appendChild(img);
-      wrapper.appendChild(badge);
-      container.appendChild(wrapper);
-    });
-
-    container.scrollIntoView({ behavior: "smooth" });
 });
+/* ================= FAVORITES ================= */
+
+async function toggleFavorite(photoId) {
+  const email = prompt("Enter your email to save favorites:");
+
+  if (!email) return;
+
+  const res = await fetch("/favorite/toggle", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      photo_id: photoId,
+      email: email
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    if (data.action === "added") {
+      alert("Added to favorites ❤️");
+    } else {
+      alert("Removed from favorites 💔");
+    }
+  }
+}
+function downloadPhoto(url){
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+function sharePhoto(url) {
+
+  // make absolute URL (VERY IMPORTANT)
+  const fullUrl = window.location.origin + url;
+
+  // modern share (mobile)
+  if (navigator.share) {
+    navigator.share({
+      title: "PhotoShare Image",
+      url: fullUrl
+    });
+  } else {
+    // fallback → WhatsApp clean link
+    const wa = `https://wa.me/?text=${encodeURIComponent(fullUrl)}`;
+    window.open(wa, "_blank");
+  }
+}
 </script>
 
 </body>

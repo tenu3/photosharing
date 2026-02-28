@@ -48,32 +48,47 @@ body{
 }
 
 /* GRID */
-.gallery{
-  max-width:1400px;
-  margin:40px auto;
-  padding:0 20px;
-  display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-  gap:22px;
+.gallery {
+  max-width: 1400px;
+  margin: 40px auto;
+  padding: 0 20px;
+
+  column-count: 4;
+  column-gap: 20px;
+}
+/* responsive columns */
+@media (max-width: 1200px) {
+  .gallery { column-count: 3; }
+}
+@media (max-width: 768px) {
+  .gallery { column-count: 2; }
+}
+@media (max-width: 480px) {
+  .gallery { column-count: 1; }
 }
 
-/* CARD */
-.photo-card{
-  position:relative;
-  overflow:hidden;
-  border-radius:14px;
+
+/* each card */
+.photo-card {
+  break-inside: avoid;
+  margin-bottom: 20px;
+  position: relative;
+  border-radius: 14px;
+  overflow: hidden;
 }
 
-.photo-card img{
-  width:100%;
-  height:220px;
-  object-fit:cover;
-  cursor:pointer;
-  transition:.25s;
+
+/* image */
+.photo-card img {
+  width: 100%;
+  height: auto; /* ⭐ IMPORTANT for masonry */
+  display: block;
+  border-radius: 14px;
+  transition: transform .25s ease;
 }
 
 .photo-card:hover img{
-  transform:scale(1.05);
+  transform:scale(1.03);
 }
 
 /* ❤️ FAVORITE */
@@ -179,6 +194,20 @@ body{
 }
 
 /* ⭐ SHOW ON HOVER (Pixieset style) */
+/* ===== HOVER OVERLAY ===== */
+.photo-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: 12px;
+
+  background: linear-gradient(to top, rgba(0,0,0,0.55), transparent);
+  opacity: 0;
+  transition: .25s ease;
+}
 .photo-card:hover .action-bar{
   opacity:1;
   transform:translateY(0);
@@ -189,6 +218,15 @@ body{
   transform:scale(1.03);
 }
 
+.photo-overlay button,
+.photo-overlay a {
+  background: rgba(255,255,255,0.95);
+  border: none;
+  border-radius: 999px;
+  padding: 8px 10px;
+  cursor: pointer;
+  font-size: 14px;
+}
 
 /* button style */
 .icon-btn{
@@ -247,9 +285,14 @@ body{
     <img
       src="{{ url_for('static', filename=photo.photo_path) }}"
       onclick="openSlideshow({{ loop.index0 }})"
+      loading="lazy"
     >
-
-    <!-- ⭐ ACTION BUTTONS -->
+      <div class="photo-overlay">
+    <button class="icon-btn">⬇</button>
+    <button class="icon-btn">❤️</button>
+    <button class="icon-btn">🔗</button>
+  </div>
+<!-- ⭐ ACTION BUTTONS -->
     <div class="action-bar">
 
       <!-- ❤️ FAVORITE -->
@@ -261,7 +304,7 @@ body{
 
       <!-- ⬇ DOWNLOAD -->
       <button class="icon-btn"
-        onclick="downloadPhoto('{{ url_for('static', filename=photo.photo_path) }}')"
+       <button onclick="downloadPhoto({{ photo.id }})"
         title="Download">
         ⬇
       </button>
@@ -461,6 +504,54 @@ function sharePhoto(url) {
     // fallback → WhatsApp clean link
     const wa = `https://wa.me/?text=${encodeURIComponent(fullUrl)}`;
     window.open(wa, "_blank");
+  }
+}
+</script>
+<script>
+async function toggleFavorite(photoId) {
+  let email = localStorage.getItem("proof_email");
+
+  if (!email) {
+    email = prompt("Enter your email to select photos:");
+    if (!email) return;
+    localStorage.setItem("proof_email", email);
+  }
+
+  const res = await fetch("/proof/toggle", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      photo_id: photoId,
+      email: email
+    })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    alert(data.selected ? "Selected ❤️" : "Removed ❌");
+  }
+}
+</script>
+<script>
+async function downloadPhoto(photoId) {
+
+  const email = prompt("Enter your email to download:");
+
+  if (!email) return;
+
+  const res = await fetch(`/photo/${photoId}/download`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ email })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    window.open(data.file, "_blank");
+  } else {
+    alert("Download failed");
   }
 }
 </script>

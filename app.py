@@ -338,28 +338,114 @@ def toggle_favorite():
 
     return {"success": True, "action": action}
 
-@app.route("/photo/<int:photo_id>/download")
-def download_photo(photo_id):
-    conn = mysql.connect()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
+@app.route("/proof/toggle", methods=["POST"])
+def toggle_proof():
+    data = request.get_json()
 
+    photo_id = data.get("photo_id")
+    email = data.get("email")
+
+    if not photo_id or not email:
+        return {"success": False}
+
+    conn = mysql.connect()
+    cursor = conn.cursor()
+
+    # check existing
     cursor.execute("""
-        SELECT photo_path, original_name
-        FROM photos
-        WHERE id=%s
-    """, (photo_id,))
-    photo = cursor.fetchone()
+        SELECT id FROM photo_proofs
+        WHERE photo_id=%s AND client_email=%s
+    """, (photo_id, email))
+
+    existing = cursor.fetchone()
+
+    if existing:
+        cursor.execute("""
+            DELETE FROM photo_proofs
+            WHERE photo_id=%s AND client_email=%s
+        """, (photo_id, email))
+        selected = False
+    else:
+        cursor.execute("""
+            INSERT INTO photo_proofs (photo_id, gallery_id, client_email)
+            SELECT id, gallery_id, %s
+            FROM photos WHERE id=%s
+        """, (email, photo_id))
+        selected = True
+
+    conn.commit()
+    cursor.close()
     conn.close()
 
-    if not photo:
-        abort(404)
+    return {"success": True, "selected": selected}
 
-    return send_file(
-        photo["photo_path"],
-        as_attachment=True,
-        download_name=photo["original_name"]
-    )
+@app.route("/gallery/<int:gallery_id>/proof-count")
+def proof_count(gallery_id):
+    email = request.args.get("email")
 
+    conn = mysql.connect()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM photo_proofs
+        WHERE gallery_id=%s AND client_email=%s
+    """, (gallery_id, email))
+
+    count = cursor.fetchone()[0]
+
+    cursor.close()
+    conn.close()
+
+    return {"count": count}
+
+@app.route("/photo/<int:photo_id>/download", methods=["POST"])
+def download_photo(photo_id):
+    try:
+        data = request.get_json()
+        email = data.get("email")
+
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+        # get photo
+        cursor.execute("""
+            SELECT photo_path, original_name, gallery_id
+            FROM photos
+            WHERE id=%s
+        """, (photo_id,))
+        photo = cursor.fetchone()
+
+        if not photo:
+            return jsonify({"success": False})
+
+        # ⭐ INSERT DOWNLOAD ANALYTICS
+        cursor.execute("""
+            INSERT INTO photo_downloads
+            (photo_id, gallery_id, email, ip_address)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            photo_id,
+            photo["gallery_id"],
+            email,
+            request.remote_addr
+        ))
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "file": url_for(
+                "static",
+                filename=photo["photo_path"]
+            )
+        })
+
+    except Exception as e:
+        print("Download error:", e)
+        return jsonify({"success": False})
 # ===============================
 # VERIFY DOWNLOAD PIN
 # ===============================
@@ -677,6 +763,15 @@ def client_dashboard():
         WHERE g.client_id = %s
     """, (client_id,))
     total_favorites = cursor.fetchone()["total"]
+   # total downloads
+    cursor.execute("""
+      SELECT COUNT(*) AS total
+      FROM photo_downloads pd
+      JOIN galleries g ON pd.gallery_id = g.id
+      WHERE g.client_id = %s
+      """, (client_id,))
+
+    total_downloads = cursor.fetchone()["total"]
 
     # ---------------------------
     # Expire old subscriptions
@@ -739,6 +834,7 @@ def client_dashboard():
         total_galleries=total_galleries,
         total_photos=total_photos,
         total_favorites=total_favorites,
+        total_downloads=total_downloads,
         total_storage_gb=total_storage_gb,
         plan_limit_gb=plan_limit_gb,
         storage_percent=storage_percent
@@ -1131,12 +1227,13 @@ def manage_gallery(gallery_id):
         gallery_id=gallery_id
     )
 #^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-@app.route("/gallery/<int:gallery_id>")
+@app.route("/gallery/<int:gallery_id>", methods=["GET", "POST"])
 def public_gallery(gallery_id):
+
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    # ✅ get gallery
+    # Get gallery
     cursor.execute("""
         SELECT *
         FROM galleries
@@ -1145,9 +1242,42 @@ def public_gallery(gallery_id):
     gallery = cursor.fetchone()
 
     if not gallery:
+        cursor.close()
+        conn.close()
         return "Gallery not found or private", 404
 
-    # ✅ get ONLY this gallery photos
+    # ================================
+    # 🔒 PASSWORD PROTECTION
+    # ================================
+    session_key = f"gallery_access_{gallery_id}"
+
+    if gallery.get("password"):
+        # If not already unlocked
+        if not session.get(session_key):
+
+            # If user submitted password
+            if request.method == "POST":
+                entered = request.form.get("password")
+
+                if entered == gallery["password"]:
+                    session[session_key] = True
+                    return redirect(url_for("public_gallery", gallery_id=gallery_id))
+                else:
+                    return render_template(
+                        "public/gallery_password.html",
+                        gallery=gallery,
+                        error="Incorrect password"
+                    )
+
+            # First visit → show password page
+            return render_template(
+                "public/gallery_password.html",
+                gallery=gallery
+            )
+
+    # ================================
+    # LOAD PHOTOS (only after access)
+    # ================================
     cursor.execute("""
         SELECT p.*,
                COUNT(l.id) AS likes
@@ -1356,28 +1486,93 @@ def manage_galleries():
 
     return render_template("client/manage_galleries.html", galleries=galleries)
 
+import os
+from flask import request, session, redirect, url_for, render_template, flash, current_app
+
+# Assuming these are already defined in your app
+# get_db_connection() → your mysql connection function
+# BASE_DIR should be defined once at the top of app.py
+
+# Recommended: define this once at the top of your app.py (after app = Flask(...))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # folder containing app.py
+GALLERY_UPLOAD_ROOT = os.path.join(BASE_DIR, 'static', 'uploads', 'galleries')
+
+# Optional helper (you can keep or remove your existing get_gallery_path)
+def get_gallery_folder(client_id, gallery_id):
+    """
+    Returns the absolute path to the gallery's upload folder.
+    Uses gallery_id (more reliable than slug/title).
+    """
+    return os.path.join(GALLERY_UPLOAD_ROOT, str(gallery_id))
+
 
 @app.route("/client/create-gallery", methods=["GET", "POST"])
 def create_gallery():
     if request.method == "POST":
-        title = request.form["title"]
-        client_id = session["client_id"]
+        title = request.form.get("title", "").strip()
+        
+        if not title:
+            flash("Gallery title is required.", "error")
+            return redirect(url_for("create_gallery"))
 
-        folder_path, gallery_slug = get_gallery_path(client_id, title)
+        client_id = session.get("client_id")
+        if not client_id:
+            flash("Please log in to create a gallery.", "error")
+            return redirect(url_for("login"))  # ← change to your actual login route
 
-        conn = get_db_connection()
-        cur = conn.cursor()
+        conn = None
+        cur = None
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
 
-        cur.execute(
-            "INSERT INTO galleries (title, client_id) VALUES (%s, %s)",
-            (title, client_id)
-        )
+            # Insert gallery and get the new ID
+            cur.execute(
+                """
+                INSERT INTO galleries (title, client_id, created_at)
+                VALUES (%s, %s, NOW())
+                """,
+                (title, client_id)
+            )
+            conn.commit()
 
-        conn.commit()
-        conn.close()
+            # Get the newly created gallery ID
+            gallery_id = cur.lastrowid
 
-        return redirect(url_for("manage_galleries"))
+            # Create the folder using the gallery ID
+            gallery_folder = get_gallery_folder(client_id, gallery_id)
+            
+            try:
+                os.makedirs(gallery_folder, exist_ok=True)
+                current_app.logger.info(f"Created gallery folder: {gallery_folder}")
+            except Exception as folder_err:
+                current_app.logger.error(f"Failed to create gallery folder {gallery_folder}: {folder_err}")
+                # Still continue — folder creation failure shouldn't block gallery creation
+                flash("Gallery created, but folder creation failed. Contact support.", "warning")
+            else:
+                flash(f"Gallery '{title}' created successfully.", "success")
 
+            return redirect(url_for("manage_galleries"))
+
+        except pymysql.Error as db_err:
+            if conn:
+                conn.rollback()
+            current_app.logger.error(f"Database error creating gallery: {db_err}")
+            flash("Failed to create gallery due to a database error.", "error")
+            return redirect(url_for("create_gallery"))
+
+        except Exception as e:
+            current_app.logger.error(f"Unexpected error creating gallery: {e}")
+            flash("An unexpected error occurred.", "error")
+            return redirect(url_for("create_gallery"))
+
+        finally:
+            if cur:
+                cur.close()
+            if conn:
+                conn.close()
+
+    # GET request → show form
     return render_template("client/create-gallery.html")
 
 @app.route("/client/gallery/<int:gallery_id>/photos")
@@ -1552,88 +1747,234 @@ def gallery_favorites(gallery_id):
         "client/favorites.html",
         photos=photos
     )
-
-
 import os
+import time
 import requests
-from werkzeug.utils import secure_filename
+from datetime import datetime
 from urllib.parse import urlparse
+from werkzeug.utils import secure_filename
+from flask import (
+    request, session, jsonify, flash, redirect,
+    render_template, url_for, current_app
+)
+import pymysql
 
-UPLOAD_ROOT = "static/uploads/galleries"
+# ────────────────────────────────────────────────
+#   Force absolute path — no more relative surprises
+# ────────────────────────────────────────────────
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # folder where app.py lives
+UPLOAD_ROOT = os.path.join(BASE_DIR, 'static', 'uploads', 'galleries')
+
+# Log once at startup so you can see the real path immediately
+print(f"[STARTUP] BASE_DIR: {BASE_DIR}")
+print(f"[STARTUP] UPLOAD_ROOT resolved to: {UPLOAD_ROOT}")
+print(f"[STARTUP] Current working directory: {os.getcwd()}")
+print(f"[STARTUP] Can write to UPLOAD_ROOT? {os.access(UPLOAD_ROOT, os.W_OK) if os.path.exists(UPLOAD_ROOT) else 'folder not exist yet'}")
+
+def allowed_file(filename):
+    ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 
 @app.route("/client/gallery/<int:gallery_id>/upload", methods=["GET"])
-@login_required("client")
 def upload_photos_page(gallery_id):
-    client_id = session["client_id"]
+    @login_required("client")
+    def inner():
+        client_id = session.get("client_id")
+        if not client_id:
+            flash("Please log in again", "error")
+            return redirect(url_for("login"))  # ← CHANGE to your real login route name
 
-    conn = mysql.connect()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    cursor.execute(
-        "SELECT * FROM galleries WHERE id=%s AND client_id=%s",
-        (gallery_id, client_id)
-    )
-    gallery = cursor.fetchone()
+        cursor.execute(
+            "SELECT * FROM galleries WHERE id=%s AND client_id=%s",
+            (gallery_id, client_id)
+        )
+        gallery = cursor.fetchone()
 
-    cursor.close()
-    conn.close()
+        cursor.close()
+        conn.close()
 
-    if not gallery:
-        flash("Gallery not found", "error")
-        return redirect(url_for("client_dashboard"))
+        if not gallery:
+            flash("Gallery not found", "error")
+            return redirect(url_for("client_dashboard"))
 
-    return render_template(
-        "client/upload_photos.html",
-        gallery=gallery
-    )
+        return render_template("client/upload_photos.html", gallery=gallery)
+
+    return inner()
+
+
 @app.route("/client/gallery/<int:gallery_id>/upload", methods=["POST"])
-@login_required("client")
 def upload_photos(gallery_id):
-    client_id = session["client_id"]
+    @login_required("client")
+    def inner():
+        client_id = session.get("client_id")
+        if not client_id:
+            flash("Session expired. Please log in.", "error")
+            return redirect(url_for("login"))  # ← CHANGE to your real login route
 
-    conn = mysql.connect()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
+        print(f"[LOCAL UPLOAD] Route called for gallery {gallery_id} by client {client_id}")
 
-    # ✅ verify gallery ownership
-    cursor.execute(
-        "SELECT * FROM galleries WHERE id=%s AND client_id=%s",
-        (gallery_id, client_id)
-    )
-    gallery = cursor.fetchone()
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    if not gallery:
+        cursor.execute(
+            "SELECT id FROM galleries WHERE id=%s AND client_id=%s LIMIT 1",
+            (gallery_id, client_id)
+        )
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            print(f"[LOCAL UPLOAD] Gallery {gallery_id} not found or not owned by {client_id}")
+            flash("Gallery not found or access denied", "error")
+            return redirect(url_for("client_dashboard"))
+
+        files = request.files.getlist("photos")   # Make sure form has <input name="photos" multiple ...>
+
+        print(f"[LOCAL UPLOAD] Files received: {len(files)}")
+        print(f"[LOCAL UPLOAD] Filenames: {[f.filename for f in files]}")
+
+        if not files or all(f.filename == "" for f in files):
+            cursor.close()
+            conn.close()
+            print("[LOCAL UPLOAD] No files received")
+            flash("No files selected", "warning")
+            return redirect(url_for("manage_gallery", gallery_id=gallery_id))
+
+        gallery_folder = os.path.join(UPLOAD_ROOT, str(gallery_id))
+        print(f"[LOCAL UPLOAD] Target folder: {gallery_folder}")
+
+        try:
+            os.makedirs(gallery_folder, exist_ok=True)
+            print(f"[LOCAL UPLOAD] Folder created / already exists: {gallery_folder}")
+        except Exception as e:
+            print(f"[LOCAL UPLOAD] Folder creation failed: {e}")
+            flash("Server error - could not create upload folder", "error")
+            return redirect(url_for("manage_gallery", gallery_id=gallery_id))
+
+        uploaded_count = 0
+
+        for file in files:
+            if not file.filename or not allowed_file(file.filename):
+                print(f"[LOCAL UPLOAD] Skipping invalid file: {file.filename}")
+                continue
+
+            try:
+                filename = secure_filename(file.filename)
+                save_path = os.path.join(gallery_folder, filename)
+
+                base, ext = os.path.splitext(filename)
+                counter = 1
+                while os.path.exists(save_path):
+                    filename = f"{base}_{counter}{ext}"
+                    save_path = os.path.join(gallery_folder, filename)
+                    counter += 1
+
+                print(f"[LOCAL UPLOAD] Saving file to: {save_path}")
+                file.save(save_path)
+
+                file_size_bytes = os.path.getsize(save_path)
+                print(f"[LOCAL UPLOAD] File saved successfully: {save_path} (size: {file_size_bytes} bytes)")
+
+                photo_path = f"uploads/galleries/{gallery_id}/{filename}"
+
+                cursor.execute("""
+                    INSERT INTO photos
+                    (client_id, gallery_id, filename, original_name, photo_path, file_size, created_at)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    client_id,
+                    gallery_id,
+                    filename,
+                    file.filename,
+                    photo_path,
+                    file_size_bytes,
+                    datetime.now()
+                ))
+
+                uploaded_count += 1
+
+            except Exception as e:
+                print(f"[LOCAL UPLOAD] Error saving {file.filename}: {type(e).__name__} - {str(e)}")
+                current_app.logger.error(f"Local upload error: {e}", exc_info=True)
+                continue
+
+        conn.commit()
         cursor.close()
         conn.close()
-        return "Gallery not found", 404
 
-    files = request.files.getlist("photos")
-
-    if not files:
-        cursor.close()
-        conn.close()
-        flash("No files selected", "warning")
+        flash(f"{uploaded_count} photo(s) uploaded successfully.", "success")
         return redirect(url_for("manage_gallery", gallery_id=gallery_id))
 
-    # ✅ create gallery folder
-    gallery_folder = os.path.join("static", "uploads", "galleries", str(gallery_id))
-    os.makedirs(gallery_folder, exist_ok=True)
+    return inner()
 
-    uploaded_count = 0
 
-    for file in files:
+@app.route("/client/gallery/<int:gallery_id>/upload-from-url", methods=["POST"])
+def upload_photo_from_url(gallery_id):
+    @login_required("client")
+    def inner():
+        client_id = session.get("client_id")
+        if not client_id:
+            return jsonify({"success": False, "error": "Not authenticated"}), 401
+
+        print(f"[URL UPLOAD] Started for gallery {gallery_id} by client {client_id}")
+
+        data = request.get_json(silent=True)
+        if not data:
+            print("[URL UPLOAD] Invalid JSON received")
+            return jsonify({"success": False, "error": "Invalid JSON"}), 400
+
+        image_url = data.get("image_url")
+        if not image_url:
+            print("[URL UPLOAD] No image_url provided")
+            return jsonify({"success": False, "error": "No image URL provided"}), 400
+
+        print(f"[URL UPLOAD] Downloading from: {image_url}")
+
+        conn = None
+        cursor = None
         try:
-            if file.filename == "":
-                continue
+            conn = mysql.connect()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-            if not allowed_file(file.filename):
-                continue
+            cursor.execute(
+                "SELECT id FROM galleries WHERE id=%s AND client_id=%s LIMIT 1",
+                (gallery_id, client_id)
+            )
+            if not cursor.fetchone():
+                print(f"[URL UPLOAD] Gallery {gallery_id} not found or not owned")
+                return jsonify({"success": False, "error": "Gallery not found or not owned"}), 404
 
-            # ✅ secure filename
-            filename = secure_filename(file.filename)
+            response = requests.get(image_url, timeout=15, stream=True)
+            response.raise_for_status()
+
+            content_type = response.headers.get("content-type", "").lower()
+            if "image" not in content_type:
+                print(f"[URL UPLOAD] Not an image: {content_type}")
+                return jsonify({"success": False, "error": "URL does not point to an image"}), 400
+
+            parsed = urlparse(image_url)
+            original_name = os.path.basename(parsed.path) or "imported_image"
+            filename = secure_filename(original_name)
+
+            if not filename or filename == ".":
+                ext = ".jpg"
+                if "png" in content_type: ext = ".png"
+                elif "webp" in content_type: ext = ".webp"
+                filename = f"imported_{int(time.time())}{ext}"
+            elif not os.path.splitext(filename)[1]:
+                filename += ".jpg"
+
+            gallery_folder = os.path.join(UPLOAD_ROOT, str(gallery_id))
+            print(f"[URL UPLOAD] Target folder: {gallery_folder}")
+
+            os.makedirs(gallery_folder, exist_ok=True)
+            print(f"[URL UPLOAD] Folder ready: {gallery_folder}")
 
             save_path = os.path.join(gallery_folder, filename)
 
-            # ✅ avoid overwrite
             base, ext = os.path.splitext(filename)
             counter = 1
             while os.path.exists(save_path):
@@ -1641,16 +1982,17 @@ def upload_photos(gallery_id):
                 save_path = os.path.join(gallery_folder, filename)
                 counter += 1
 
-            # ✅ save file
-            file.save(save_path)
+            print(f"[URL UPLOAD] Saving to: {save_path}")
+            with open(save_path, "wb") as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
 
-            # ✅ IMPORTANT — STORE BYTES (NOT KB)
             file_size_bytes = os.path.getsize(save_path)
+            print(f"[URL UPLOAD] File saved: {save_path} (size: {file_size_bytes} bytes)")
 
-            # ✅ relative path for browser
-            photo_path = f"uploads/galleries/{gallery_id}/{filename}"
+            db_path = f"uploads/galleries/{gallery_id}/{filename}"
 
-            # ✅ insert into DB
             cursor.execute("""
                 INSERT INTO photos
                 (client_id, gallery_id, filename, original_name, photo_path, file_size, created_at)
@@ -1659,123 +2001,93 @@ def upload_photos(gallery_id):
                 client_id,
                 gallery_id,
                 filename,
-                file.filename,
-                photo_path,
-                file_size_bytes,   # ⭐ CRITICAL
+                original_name,
+                db_path,
+                file_size_bytes,
                 datetime.now()
             ))
 
-            uploaded_count += 1
+            conn.commit()
+            print(f"[URL UPLOAD] Database insert successful")
+
+            return jsonify({"success": True, "filename": filename})
+
+        except requests.RequestException as e:
+            print(f"[URL UPLOAD] Download failed: {str(e)}")
+            return jsonify({"success": False, "error": f"Download failed: {str(e)}"}), 400
+
+        except pymysql.Error as e:
+            if conn: conn.rollback()
+            print(f"[URL UPLOAD] DB error: {str(e)}")
+            return jsonify({"success": False, "error": "Database error"}), 500
 
         except Exception as e:
-            print("Upload error:", e)
-            continue
+            if conn: conn.rollback()
+            print(f"[URL UPLOAD] General error: {type(e).__name__} - {str(e)}")
+            current_app.logger.error(f"URL upload error: {e}", exc_info=True)
+            return jsonify({"success": False, "error": "Server error"}), 500
 
-    # ✅ commit once after loop
-    conn.commit()
+        finally:
+            if cursor: cursor.close()
+            if conn: conn.close()
 
-    cursor.close()
-    conn.close()
-
-    flash(f"{uploaded_count} photo(s) uploaded successfully.", "success")
-    return redirect(url_for("manage_gallery", gallery_id=gallery_id))
-
-@app.route("/client/gallery/<int:gallery_id>/upload-from-url", methods=["POST"])
-@login_required("client")
-def upload_photo_from_url(gallery_id):
-    client_id = session["client_id"]
-    data = request.get_json()
-    image_url = data.get("image_url")
-
-    if not image_url:
-        return {"success": False, "error": "No image URL provided"}, 400
-
-    conn = mysql.connect()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
-
-    # Verify gallery ownership
-    cursor.execute(
-        "SELECT * FROM galleries WHERE id=%s AND client_id=%s",
-        (gallery_id, client_id)
-    )
-    gallery = cursor.fetchone()
-
-    if not gallery:
-        conn.close()
-        return {"success": False, "error": "Gallery not found"}, 404
-
-    try:
-        # Download image
-        response = requests.get(image_url, timeout=10)
-        response.raise_for_status()
-
-        # Get filename
-        parsed = urlparse(image_url)
-        filename = os.path.basename(parsed.path)
-        filename = secure_filename(filename)
-
-        if not filename:
-            filename = f"imported_{int(time.time())}.jpg"
-
-        gallery_folder = os.path.join(UPLOAD_ROOT, str(gallery_id))
-        os.makedirs(gallery_folder, exist_ok=True)
-
-        save_path = os.path.join(gallery_folder, filename)
-
-        with open(save_path, "wb") as f:
-            f.write(response.content)
-
-        db_path = f"uploads/galleries/{gallery_id}/{filename}"
-
-        cursor.execute("""
-            INSERT INTO photos (gallery_id, photo_path, original_name)
-            VALUES (%s, %s, %s)
-        """, (gallery_id, db_path, filename))
-
-        conn.commit()
-        conn.close()
-
-        return {"success": True}
-
-    except Exception as e:
-        conn.close()
-        return {"success": False, "error": str(e)}, 500
-
-
-
-
-
+    return inner()
 @app.route("/client/gallery/<int:gallery_id>/cover/<int:photo_id>", methods=["POST"])
 @login_required("client")
-def gallery_cover(gallery_id, photo_id):
-    client_id = session["client_id"]
+def set_gallery_cover(gallery_id, photo_id):
+    client_id = session.get("client_id")
+    if not client_id:
+        return jsonify({"success": False, "error": "Not authenticated"}), 401
 
-    conn = mysql.connect()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
+    conn = None
+    cursor = None
+    try:
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    cursor.execute("""
-        SELECT photo_path
-        FROM photos
-        WHERE id=%s AND gallery_id=%s AND client_id=%s
-    """, (photo_id, gallery_id, client_id))
+        # Verify photo belongs to this gallery & client
+        cursor.execute("""
+            SELECT photo_path
+            FROM photos
+            WHERE id = %s AND gallery_id = %s AND client_id = %s
+        """, (photo_id, gallery_id, client_id))
 
-    photo = cursor.fetchone()
+        photo = cursor.fetchone()
 
-    if not photo:
-        return {"success": False}, 404
+        if not photo:
+            return jsonify({"success": False, "error": "Photo not found or not owned"}), 404
 
-    cursor.execute("""
-        UPDATE galleries
-        SET cover_photo=%s
-        WHERE id=%s AND client_id=%s
-    """, (photo["photo_path"], gallery_id, client_id))
+        # Update cover
+        cursor.execute("""
+            UPDATE galleries
+            SET cover_photo = %s
+            WHERE id = %s AND client_id = %s
+        """, (photo["photo_path"], gallery_id, client_id))
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn.commit()
 
-    return {"success": True}
+        return jsonify({
+            "success": True,
+            "message": "Cover photo updated",
+            "cover_path": photo["photo_path"]
+        })
 
+    except pymysql.Error as e:
+        if conn:
+            conn.rollback()
+        current_app.logger.error(f"DB error setting cover: {e}")
+        return jsonify({"success": False, "error": "Database error"}), 500
+
+    except Exception as e:
+        current_app.logger.error(f"Error setting cover: {e}")
+        return jsonify({"success": False, "error": "Server error"}), 500
+
+    finally:
+        if cursor:
+            cursor.close()
+        if conn:
+            conn.close()
+            
 @app.route("/client/gallery/<int:gallery_id>/delete", methods=["POST"])
 @login_required("client")
 def delete_gallery(gallery_id):

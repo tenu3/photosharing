@@ -18,6 +18,7 @@ import numpy as np
 from PIL import Image
 from skimage.metrics import structural_similarity as ssim
 import os
+import razorpay
 
 # ────────────────────────────────────────────────
 #  Imports from your own modules
@@ -55,6 +56,14 @@ app.config['MYSQL_DATABASE_PORT']     = 3307
 app.config['MYSQL_CURSOR_CLASS']      = DictCursor
 app.config["UPLOAD_FOLDER"]           = UPLOAD_FOLDER
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID")
+RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET")
+
 mysql.init_app(app)
 
 # ────────────────────────────────────────────────
@@ -79,6 +88,9 @@ oauth.register(
 def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
+
+
+razorpay_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
 
 def login_required(role="client"):
     def decorator(f):
@@ -258,41 +270,67 @@ def photos_page():
 
     conn.close()
     return render_template("client/photos.html", photos=photos, gallery={"title": "All Photos"})
-
 @app.route("/gallery/photo/<int:photo_id>/like", methods=["POST"])
 def public_like(photo_id):
     try:
+        client_id = session.get("client_id")
+
+        # 🚨 must be logged in
+        if not client_id:
+            return jsonify({
+                "success": False,
+                "message": "Login required"
+            }), 401
+
         conn = mysql.connect()
-        cursor = conn.cursor()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-        # optional client name
-        data = request.get_json()
-        name = data.get("name", "Guest")
-
-        # insert like
+        # ✅ check if already liked
         cursor.execute("""
-            INSERT INTO photo_likes (photo_id,client_name)
-            VALUES (%s, %s)
-        """, (photo_id,name))
+            SELECT id FROM photo_likes
+            WHERE photo_id=%s AND client_id=%s
+        """, (photo_id, client_id))
+
+        existing = cursor.fetchone()
+
+        if existing:
+            # ❌ UNLIKE (toggle)
+            cursor.execute("""
+                DELETE FROM photo_likes
+                WHERE photo_id=%s AND client_id=%s
+            """, (photo_id, client_id))
+            liked = False
+        else:
+            # ❤️ LIKE
+            cursor.execute("""
+                INSERT INTO photo_likes (photo_id, client_id, created_at)
+                VALUES (%s, %s, NOW())
+            """, (photo_id, client_id))
+            liked = True
 
         conn.commit()
 
+        # ✅ return updated count
+        cursor.execute("""
+            SELECT COUNT(*) AS total
+            FROM photo_likes
+            WHERE photo_id=%s
+        """, (photo_id,))
+        count = cursor.fetchone()["total"]
+
         return jsonify({
             "success": True,
-            "message": "Photo liked"
+            "liked": liked,
+            "count": count
         })
 
     except Exception as e:
         print("LIKE ERROR:", e)
-        return jsonify({
-            "success": False,
-            "message": "Error liking photo"
-        }), 500
+        return jsonify({"success": False}), 500
 
     finally:
         cursor.close()
         conn.close()
-
 # ===============================
 # FAVORITE TOGGLE (PUBLIC)
 # ===============================
@@ -788,7 +826,7 @@ def client_dashboard():
     # Get ACTIVE plan
     # ---------------------------
     cursor.execute("""
-        SELECT cs.*, p.name, p.storage_gb
+        SELECT cs.*, p.name, p.storage
         FROM client_subscriptions cs
         JOIN plans p ON cs.plan_id = p.id
         WHERE cs.client_id=%s
@@ -817,8 +855,8 @@ def client_dashboard():
     # ---------------------------
     # PLAN LIMIT + %
     # ---------------------------
-    if current_plan and current_plan["storage_gb"]:
-        plan_limit_gb = current_plan["storage_gb"]
+    if current_plan and current_plan["storage"]:
+        plan_limit_gb = current_plan["storage"]
         storage_percent = round(
             (total_storage_gb / plan_limit_gb) * 100, 2
         )
@@ -841,175 +879,183 @@ def client_dashboard():
     )
 
 
-@app.route("/client/upgrade")
+ # adjust import according to your structure
+
+# ─── PLANS LIST (unchanged, but good to have) ───
+@app.route("/client/plans")
 @login_required("client")
-def upgrade_storage():
+def client_plans():
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    cursor.execute("SELECT * FROM plans ORDER BY id")
+    cursor.execute("SELECT * FROM plans WHERE status = 'Active' ORDER BY price ASC")
     plans = cursor.fetchall()
+
+    client_id = session["client_id"]
+    cursor.execute("""
+        SELECT p.name, p.storage AS storage, cs.end_date
+        FROM client_subscriptions cs
+        JOIN plans p ON cs.plan_id = p.id
+        WHERE cs.client_id = %s 
+          AND cs.status = 'active'
+          AND (cs.end_date IS NULL OR cs.end_date >= CURDATE())
+        LIMIT 1
+    """, (client_id,))
+    current_plan = cursor.fetchone()
 
     cursor.close()
     conn.close()
 
-   
     return render_template(
         "client/plans.html",
         plans=plans,
-        page_title="Upgrade your storage"
+        current_plan=current_plan,
+        page_title="Choose a Plan",
+        razorpay_key_id=RAZORPAY_KEY_ID   # ← pass to template if needed
     )
 
-from datetime import datetime, timedelta
-
-@app.route("/client/purchase/<int:plan_id>", methods=["GET", "POST"])
+@app.route("/client/purchase/<int:plan_id>", methods=["GET"])
 @login_required("client")
 def purchase_plan(plan_id):
     conn = mysql.connect()
     cursor = conn.cursor(pymysql.cursors.DictCursor)
 
-    # Get plan details
-    cursor.execute("SELECT * FROM plans WHERE id=%s", (plan_id,))
+    # Get plan
+    cursor.execute("""
+        SELECT id, name, price, duration, storage AS storage, is_recommended 
+        FROM plans 
+        WHERE id = %s AND status = 'Active'
+    """, (plan_id,))
     plan = cursor.fetchone()
 
     if not plan:
-        return "Plan not found", 404
+        cursor.close()
+        conn.close()
+        flash("Plan not found or inactive.", "danger")
+        return redirect(url_for("client_plans"))
 
-    # If user confirms purchase
-    if request.method == "POST":
-        client_id = session["client_id"]
+    # Get current logged-in client details
+    client_id = session["client_id"]
+    cursor.execute("""
+        SELECT name, email, phone 
+        FROM clients 
+        WHERE id = %s AND status = 'active'
+        LIMIT 1
+    """, (client_id,))
+    client = cursor.fetchone()
 
-        start_date = datetime.today().date()
-        end_date = start_date + timedelta(days=plan["duration"])
+    cursor.close()
+    conn.close()
 
+    if not client:
+        flash("Client account not found or inactive.", "danger")
+        return redirect(url_for("client_plans"))
+
+    # Convert price to paise
+    amount_paise = int(plan["price"] * 100)
+
+    # Create Razorpay Order
+    try:
+        order_data = {
+            "amount": amount_paise,
+            "currency": "INR",
+            "receipt": f"plan_{plan_id}_client_{client_id}_{int(time.time())}",  # better uniqueness
+            "notes": {
+                "plan_id": plan_id,
+                "client_id": client_id
+            }
+        }
+        razorpay_order = razorpay_client.order.create(order_data)
+        order_id = razorpay_order["id"]
+    except Exception as e:
+        flash(f"Error creating payment order: {str(e)}", "danger")
+        return redirect(url_for("client_plans"))
+
+    return render_template(
+        "client/purchase-confirm.html",
+        plan=plan,
+        client=client,                    # ← pass client dict to template
+        razorpay_order_id=order_id,
+        razorpay_key_id=RAZORPAY_KEY_ID,
+        amount_paise=amount_paise,
+        page_title=f"Pay for {plan['name']}"
+    )
+    
+# ─── STEP 2: Verify payment & activate plan (called after checkout) ───
+@app.route("/client/payment-verification", methods=["POST"])
+@login_required("client")
+def payment_verification():
+    client_id = session.get("client_id")
+    data = request.form
+
+    if not data.get("razorpay_payment_id") or not data.get("razorpay_order_id") or not data.get("razorpay_signature"):
+        flash("Payment details missing.", "danger")
+        return redirect(url_for("client_plans"))
+
+    try:
+        # Verify signature
+        razorpay_client.utility.verify_payment_signature({
+            "razorpay_order_id": data["razorpay_order_id"],
+            "razorpay_payment_id": data["razorpay_payment_id"],
+            "razorpay_signature": data["razorpay_signature"]
+        })
+
+        # Signature valid → payment success
+        # Get plan_id from order (you can also fetch from razorpay_order notes)
+        # For simplicity — we assume you pass it or fetch from DB
+
+        # You should ideally capture payment here if payment_capture='0'
+        # razorpay_client.payment.capture(payment_id, amount)
+
+        # Now activate plan (same logic as before)
+        conn = mysql.connect()
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+        # Get plan_id — best way: store it temporarily or fetch from order notes via API
+        # For now — assume you pass plan_id in hidden field or session
+        plan_id = request.form.get("plan_id")  # add this hidden field!
+
+        if not plan_id:
+            raise ValueError("Plan ID missing")
+
+        cursor.execute("SELECT id, name, duration, storage FROM plans WHERE id = %s AND status = 'Active'", (plan_id,))
+        plan = cursor.fetchone()
+
+        if not plan:
+            raise ValueError("Plan not found")
+
+        # Deactivate old plans
         cursor.execute("""
-            INSERT INTO client_subscriptions
-            (client_id, plan_id, start_date, end_date, status)
-            VALUES (%s, %s, %s, %s, 'active')
-        """, (client_id, plan_id, start_date, end_date))
+            UPDATE client_subscriptions 
+            SET status = 'expired' 
+            WHERE client_id = %s AND status = 'active'
+        """, (client_id,))
+
+        # Activate new one
+        cursor.execute("""
+            INSERT INTO client_subscriptions 
+            (client_id, plan_id, start_date, end_date, status,
+             payment_id, payment_provider)
+            VALUES 
+            (%s, %s, CURDATE(), DATE_ADD(CURDATE(), INTERVAL %s DAY), 'active',
+             %s, 'razorpay')
+        """, (client_id, plan_id, plan["duration"], data["razorpay_payment_id"]))
 
         conn.commit()
         cursor.close()
         conn.close()
 
+        flash(f"🎉 {plan['name']} activated successfully! Payment ID: {data['razorpay_payment_id']}", "success")
         return redirect(url_for("client_dashboard"))
 
-    cursor.close()
-    conn.close()
-
-    return render_template("client/purchase.html", plan=plan)
-
-
-from datetime import datetime, timedelta
-
-@app.route("/client/confirm_purchase", methods=["POST"])
-@login_required("client")
-def confirm_purchase():
-    client_id = session["client_id"]
-    plan_id = request.form.get("plan_id")
-
-    if not plan_id:
-        flash("Invalid plan.", "danger")
-        return redirect(url_for("pricing"))
-
-    conn = mysql.connect()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
-
-    # 🔥 get plan
-    cursor.execute("SELECT * FROM plans WHERE id=%s", (plan_id,))
-    plan = cursor.fetchone()
-
-    if not plan:
-        conn.close()
-        flash("Plan not found.", "danger")
-        return redirect(url_for("pricing"))
-
-    start_date = datetime.today().date()
-    end_date = start_date + timedelta(days=plan["duration"])
-
-    # 🔥 deactivate old plans
-    cursor.execute("""
-        UPDATE client_subscriptions
-        SET status='expired'
-        WHERE client_id=%s
-    """, (client_id,))
-
-    # 🔥 insert new active plan
-    cursor.execute("""
-        INSERT INTO client_subscriptions
-        (client_id, plan_id, start_date, end_date, status)
-        VALUES (%s, %s, %s, %s, 'active')
-    """, (client_id, plan_id, start_date, end_date))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    flash("🎉 Plan activated successfully!", "success")
-    return redirect(url_for("client_dashboard"))
-
-
-# -----------------------------
-# Step 1: Show confirmation form
-# -----------------------------
-@app.route("/subscribe/form/<int:plan_id>")
-@login_required("client")
-def subscribe_form(plan_id):
-    conn = mysql.connect()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
-
-    cursor.execute("SELECT * FROM plans WHERE id = %s", (plan_id,))
-    plan = cursor.fetchone()
-
-    cursor.close()
-    conn.close()
-
-    if not plan:
-        return "Plan not found", 404
-
-    return render_template("client/subscribe_form.html", plan=plan)
-
-
-# -----------------------------
-# Step 2: Confirm subscription
-# -----------------------------
-@app.route("/subscribe/confirm/<int:plan_id>", methods=["POST"])
-@login_required("client")
-def subscribe_confirm(plan_id):
-    client_id = session["client_id"]
-
-    conn = mysql.connect()
-    cursor = conn.cursor()
-
-    # 1. Deactivate old plans
-    cursor.execute("""
-        UPDATE client_subscriptions
-        SET status='inactive'
-        WHERE client_id=%s
-    """, (client_id,))
-
-    # 2. Insert new active plan
-    cursor.execute("""
-        INSERT INTO client_subscriptions (client_id, plan_id, status)
-        VALUES (%s, %s, 'active')
-    """, (client_id, plan_id))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    flash("Plan upgraded successfully!", "success")
-    return redirect(url_for("client_dashboard"))
-
-
-
-
-
-
-
-
-
-
+    except razorpay.errors.SignatureVerificationError:
+        flash("Payment signature verification failed. Please contact support.", "danger")
+        return redirect(url_for("client_plans"))
+    except Exception as e:
+        flash(f"Payment processing error: {str(e)}", "danger")
+        return redirect(url_for("client_plans"))
+    
+#__________________________________________________________
 @app.route("/edit-profile")
 def edit_profile():
     return render_template("client/edit_profile.html")
@@ -1203,12 +1249,17 @@ def manage_gallery(gallery_id):
         FROM galleries WHERE id = %s
     """, (gallery_id,))
     gallery = cursor.fetchone()
-
     cursor.execute("""
-        SELECT id, filename, original_name, photo_path, file_size, created_at
-        FROM photos
-        WHERE gallery_id = %s
-       ORDER BY sort_order ASC, id ASC
+    SELECT 
+        p.*,
+        COUNT(DISTINCT pl.id) AS like_count,
+        COUNT(DISTINCT pd.id) AS download_count
+    FROM photos p
+    LEFT JOIN photo_likes pl ON pl.photo_id = p.id
+    LEFT JOIN photo_downloads pd ON pd.photo_id = p.id
+    WHERE p.gallery_id = %s
+    GROUP BY p.id
+    ORDER BY p.sort_order ASC, p.id ASC
     """, (gallery_id,))
     photos = cursor.fetchall()
 
@@ -1279,14 +1330,15 @@ def public_gallery(gallery_id):
     # LOAD PHOTOS (only after access)
     # ================================
     cursor.execute("""
-        SELECT p.*,
-               COUNT(l.id) AS likes
-        FROM photos p
-        LEFT JOIN photo_likes l ON p.id = l.photo_id
-        WHERE p.gallery_id=%s
-        GROUP BY p.id
-        ORDER BY p.created_at DESC
-    """, (gallery_id,))
+    SELECT p.*,
+           COUNT(l.id) AS likes,
+           MAX(CASE WHEN l.client_id = %s THEN 1 ELSE 0 END) AS liked_by_user
+    FROM photos p
+    LEFT JOIN photo_likes l ON p.id = l.photo_id
+    WHERE p.gallery_id=%s
+    GROUP BY p.id
+    ORDER BY p.created_at DESC
+""", (session.get("client_id", 0), gallery_id))
     photos = cursor.fetchall()
 
     cursor.close()
@@ -1297,6 +1349,32 @@ def public_gallery(gallery_id):
         gallery=gallery,
         photos=photos
     )
+
+@app.route("/favorites")
+def public_favorites():
+    email = session.get("visitor_email")
+
+    if not email:
+        return "No favorites yet"
+
+    conn = mysql.connect()
+    cursor = conn.cursor(pymysql.cursors.DictCursor)
+
+    cursor.execute("""
+        SELECT p.*
+        FROM photos p
+        JOIN photo_likes l ON p.id = l.photo_id
+        WHERE l.client_name=%s
+        ORDER BY l.id DESC
+    """, (email,))
+
+    photos = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+
+    return render_template("public/favorites.html", photos=photos)
+
 @app.route("/client/preview-gallery/<int:gallery_id>/preview")
 @login_required("client")  # your custom decorator
 def preview_gallery(gallery_id):
@@ -2087,7 +2165,7 @@ def set_gallery_cover(gallery_id, photo_id):
             cursor.close()
         if conn:
             conn.close()
-            
+                
 @app.route("/client/gallery/<int:gallery_id>/delete", methods=["POST"])
 @login_required("client")
 def delete_gallery(gallery_id):

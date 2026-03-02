@@ -292,6 +292,19 @@ body{
     <button class="icon-btn">❤️</button>
     <button class="icon-btn">🔗</button>
   </div>
+  <div class="absolute bottom-3 right-3 flex items-center gap-2">
+
+  <button
+  onclick="toggleLike({{ photo.id }}, this)"
+  class="like-btn text-2xl transition
+  {{ 'text-red-500' if photo.liked_by_user else 'text-gray-300' }}">
+  ❤️
+</button>
+
+<span id="like-count-{{ photo.id }}">
+  {{ photo.likes }}
+</span>
+</div>
 <!-- ⭐ ACTION BUTTONS -->
     <div class="action-bar">
 
@@ -508,32 +521,6 @@ function sharePhoto(url) {
 }
 </script>
 <script>
-async function toggleFavorite(photoId) {
-  let email = localStorage.getItem("proof_email");
-
-  if (!email) {
-    email = prompt("Enter your email to select photos:");
-    if (!email) return;
-    localStorage.setItem("proof_email", email);
-  }
-
-  const res = await fetch("/proof/toggle", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      photo_id: photoId,
-      email: email
-    })
-  });
-
-  const data = await res.json();
-
-  if (data.success) {
-    alert(data.selected ? "Selected ❤️" : "Removed ❌");
-  }
-}
-</script>
-<script>
 async function downloadPhoto(photoId) {
 
   const email = prompt("Enter your email to download:");
@@ -555,6 +542,47 @@ async function downloadPhoto(photoId) {
   }
 }
 </script>
+<script>
+function toggleLike(photoId, btn) {
 
+    // 🟡 get or ask email
+    let email = sessionStorage.getItem("fav_email");
+
+    if (!email) {
+        email = prompt("Enter your email to like photos:");
+        if (!email) return;
+        sessionStorage.setItem("fav_email", email);
+    }
+
+    fetch(`/gallery/photo/${photoId}/like`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email: email })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        if (!data.success) return;
+
+        const countEl = btn.parentElement.querySelector(".like-count");
+
+        // ❤️ color toggle
+        if (data.liked) {
+            btn.classList.remove("text-gray-300");
+            btn.classList.add("text-red-500");
+            btn.classList.add("scale-125");
+            setTimeout(()=>btn.classList.remove("scale-125"),200);
+        } else {
+            btn.classList.remove("text-red-500");
+            btn.classList.add("text-gray-300");
+        }
+ // 🔢 update count
+        document.getElementById(`like-count-${photoId}`).innerText = data.count;
+    });
+    .catch(() => alert("Error liking photo"));
+}
+</script>
 </body>
 </html>

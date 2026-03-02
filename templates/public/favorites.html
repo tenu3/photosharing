@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>❤️ Your Favorites</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* ❤️ pop animation */
+        @keyframes likePop {
+            0%   { transform: scale(1); }
+            40%  { transform: scale(1.5); }
+            100% { transform: scale(1); }
+        }
+
+        .like-pop {
+            animation: likePop 0.35s ease;
+        }
+
+        /* ❤️ double tap heart overlay */
+        .double-heart {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 80px;
+            color: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.3s;
+        }
+
+        .photo-card.double-liked .double-heart {
+            opacity: 0.9;
+            transform: scale(1.2);
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 min-h-screen">
+
+<!-- ================= HEADER ================= -->
+<div class="max-w-7xl mx-auto px-6 py-10">
+
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-10">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800">
+            ❤️ Your Favorite Photos
+        </h1>
+
+        <a href="javascript:history.back()"
+           class="mt-4 md:mt-0 bg-gray-900 hover:bg-black text-white px-6 py-3 rounded-full font-medium transition shadow">
+            ← Back to Gallery
+        </a>
+    </div>
+
+    <!-- ================= EMPTY STATE ================= -->
+    {% if not photos %}
+        <div class="text-center py-24">
+            <div class="text-6xl mb-4">💔</div>
+            <h2 class="text-2xl font-semibold text-gray-700 mb-2">
+                No favorites yet
+            </h2>
+            <p class="text-gray-500">
+                Photos you like will appear here.
+            </p>
+        </div>
+    {% else %}
+
+    <!-- ================= PHOTO GRID ================= -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+
+        {% for photo in photos %}
+        <div class="photo-card relative group rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition">
+
+            <!-- Image -->
+            <img src="{{ url_for('static', filename=photo.photo_path) }}"
+                 class="w-full h-56 object-cover"
+                 ondblclick="doubleTapLike({{ photo.id }}, this.closest('.photo-card').querySelector('.like-btn'))">
+
+            <!-- ❤️ double tap overlay -->
+            <div class="double-heart">❤️</div>
+
+            <!-- Bottom bar -->
+            <div class="absolute bottom-0 left-0 right-0 bg-black/60 backdrop-blur-sm px-3 py-2 flex items-center justify-between">
+
+                <!-- Like button -->
+                <button
+                    onclick="toggleLike({{ photo.id }}, this)"
+                    class="like-btn text-xl text-red-500 transition">
+                    ❤️
+                </button>
+
+                <!-- Like count -->
+                <span class="like-count text-white text-sm font-semibold">
+                    {{ photo.likes or 1 }}
+                </span>
+
+            </div>
+        </div>
+        {% endfor %}
+
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- ================= JS ================= -->
+<script>
+function toggleLike(photoId, btn) {
+
+    let email = sessionStorage.getItem("fav_email");
+
+    if (!email) {
+        email = prompt("Enter your email to manage favorites:");
+        if (!email) return;
+        sessionStorage.setItem("fav_email", email);
+    }
+
+    fetch(`/gallery/photo/${photoId}/like`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ email: email })
+    })
+    .then(res => res.json())
+    .then(data => {
+
+        if (!data.success) return;
+
+        const countEl = btn.parentElement.querySelector(".like-count");
+
+        /* ❤️ pop animation */
+        btn.classList.add("like-pop");
+        setTimeout(() => btn.classList.remove("like-pop"), 350);
+
+        /* ❤️ toggle color */
+        if (data.action === "added") {
+            btn.classList.add("text-red-500");
+            btn.classList.remove("text-white");
+        } else {
+            btn.classList.remove("text-red-500");
+            btn.classList.add("text-white");
+        }
+
+        /* update count */
+        countEl.innerText = data.count;
+
+        /* ❤️ double tap effect */
+        const card = btn.closest(".photo-card");
+        if (card) {
+            card.classList.add("double-liked");
+            setTimeout(() => card.classList.remove("double-liked"), 600);
+        }
+    });
+}
+
+/* double tap handler */
+function doubleTapLike(photoId, btn) {
+    toggleLike(photoId, btn);
+}
+</script>
+
+</body>
+</html>

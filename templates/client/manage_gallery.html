@@ -245,8 +245,7 @@ a i {
 <div class="photo-grid">
 
   {% for photo in photos %}
- <div class="relative group overflow-hidden rounded-2xl shadow-md photo-item"
-     data-id="{{ photo.id }}">
+<div class="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition duration-300">
 
     <!-- Drag handle -->
     <div class="drag-handle absolute top-3 left-3 z-20
@@ -256,9 +255,46 @@ a i {
         <i class="fas fa-grip-lines"></i>
     </div>
 
+    <!-- Image wrapper -->
+    <div class="relative">
       <img src="{{ url_for('static', filename=photo.photo_path) }}"
            class="w-full h-56 object-cover transition duration-500 group-hover:scale-105">
+          
+           <!-- ⭐ Set as Cover Button -->
+    <button
+        onclick="setAsCover({{ gallery.id }}, {{ photo.id }})"
+        class="absolute top-3 right-3
+               bg-black/70 hover:bg-black
+               text-white text-xs font-semibold
+               px-3 py-1.5 rounded-lg
+               opacity-0 group-hover:opacity-100
+               transition duration-200 shadow-lg background blur">
+        ★ Set Cover
+    </button>
 
+    <!-- ✅ Current Cover Badge -->
+    {% if gallery.cover_photo == photo.photo_path %}
+    <div class="absolute bottom-2 left-2
+                bg-green-600 text-white
+                text-xs px-3 py-1 rounded-full
+                font-semibold shadow">
+        Current Cover
+    </div>
+    {% endif %}
+  </div>
+  <div class="absolute bottom-2 left-2 flex gap-2">
+
+    <!-- ❤️ Likes -->
+    <div class="bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+        ❤️ {{ photo.like_count or 0 }}
+    </div>
+
+    <!-- ⬇️ Downloads -->
+    <div class="bg-black/70 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+        ⬇️ {{ photo.download_count or 0 }}
+    </div>
+
+</div>
       <!-- Delete Button -->
       <form method="POST"
             action="{{ url_for('delete_photo', photo_id=photo.id) }}"
@@ -345,6 +381,38 @@ new Sortable(grid, {
         });
     }
 });
+</script>
+<script>
+function setAsCover(galleryId, photoId) {
+    if (!confirm("Set this photo as gallery cover?")) return;
+
+    fetch(`/client/gallery/${galleryId}/cover/${photoId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            showToast("✅ Cover photo updated");
+            setTimeout(() => location.reload(), 700);
+        } else {
+            alert("Failed to update cover");
+        }
+    })
+    .catch(() => alert("Network error"));
+}
+
+// ✨ nice toast
+function showToast(msg) {
+    const toast = document.createElement("div");
+    toast.innerText = msg;
+    toast.className =
+        "fixed bottom-6 right-6 bg-green-600 text-white px-5 py-3 rounded-lg shadow-lg z-50";
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+}
 </script>
 </body>
 </html>

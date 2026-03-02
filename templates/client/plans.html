@@ -1,231 +1,172 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Subscription Plans</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ page_title }}</title>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      color: #333;
+      margin: 0;
+      padding: 0;
+    }
+
+    .plans-page {
+      max-width: 1100px;
+      margin: 2rem auto;
+      padding: 0 15px;
+    }
+
+    h1, h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #2c3e50;
+    }
+
+    .current-plan-info {
+      background: #e8f4ff;
+      border: 1px solid #b3d4fc;
+      border-radius: 8px;
+      padding: 14px 20px;
+      margin-bottom: 2.5rem;
+      text-align: center;
+      font-size: 1.1rem;
+    }
+
+    .plans-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1.8rem;
+      justify-content: center;
+    }
+
+    .plan-card {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 340px;
+      padding: 1.8rem 1.5rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.07);
+      transition: all 0.18s ease;
+      text-align: center;
+    }
+
+    .plan-card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.12);
+    }
+
+    .plan-card h3 {
+      margin: 0 0 1.2rem;
+      font-size: 1.6rem;
+    }
+
+    .price {
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: #27ae60;
+      margin-bottom: 1.2rem;
+    }
+
+    .price small {
+      display: block;
+      font-size: 1rem;
+      color: #666;
+      margin-top: 0.4rem;
+    }
+
+    .plan-card ul {
+      list-style: none;
+      padding: 0;
+      margin: 1.2rem 0 1.8rem;
+    }
+
+    .plan-card li {
+      margin: 0.7rem 0;
+      font-size: 1.1rem;
+    }
+
+    .recommended {
+      color: #e67e22;
+      font-weight: bold;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.9rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 500;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: background 0.2s;
+    }
+
+    .btn-primary {
+      background: #3498db;
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2980b9;
+    }
+
+    .no-plans {
+      text-align: center;
+      color: #777;
+      font-size: 1.2rem;
+      padding: 3rem 1rem;
+    }
+  </style>
 </head>
-<style>
-  .bg-gold {
-    background-color: #c7a36b;
-  }
-  .bg-gold:hover {
-    background-color: #c7a36b;
-  }
-  .text-gold {
-    color: #c7a36b;
-  }
-  /* ===== SECTION ===== */
-.pricing-section {
-  padding: 70px 20px;
-  background: linear-gradient(180deg,#f8fafc,#eef2f7);
-  text-align: center;
-}
 
-.pricing-title {
-  font-size: 36px;
-  font-weight: 700;
-  margin-bottom: 50px;
-  color: #0f172a;
-}
+<body>
 
-/* ===== GRID ===== */
-.pricing-grid {
-  max-width: 1200px;
-  margin: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
-  gap: 30px;
-}
+<div class="plans-page">
 
-/* ===== CARD ===== */
-.pricing-card {
-  background: white;
-  border-radius: 20px;
-  padding: 35px 28px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-  position: relative;
-  transition: all .35s ease;
-}
+  <h2>{{ page_title }}</h2>
 
-.pricing-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 25px 60px rgba(0,0,0,0.15);
-}
+  {% if current_plan %}
+    <div class="current-plan-info">
+      <p>
+        <strong>Current Plan:</strong> {{ current_plan.name }}
+        • {{ current_plan.storage }} GB
+        • Expires: {{ current_plan.end_date or 'Never' }}
+      </p>
+    </div>
+  {% endif %}
 
-/* ===== RECOMMENDED ===== */
-.pricing-card.recommended {
-  border: 2px solid #c7a36b;
-  transform: scale(1.04);
-}
+  <div class="plans-container">
+    {% for plan in plans %}
+      <div class="plan-card">
+        <h3>{{ plan.name }}</h3>
 
-.badge {
-  position: absolute;
-  top: -12px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: #c7a36b;
-  color: white;
-  padding: 6px 16px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-}
+        <div class="price">
+          ₹{{ "%.2f"|format(plan.price) }}
+          <small>for {{ plan.duration }} days</small>
+        </div>
 
-/* ===== TEXT ===== */
-.plan-name {
-  font-size: 22px;
-  margin-bottom: 15px;
-}
+        <ul>
+          <li><strong>{{ plan.storage }} GB</strong> storage</li>
+          {% if plan.is_recommended %}
+            <li class="recommended">Recommended</li>
+          {% endif %}
+        </ul>
 
-.price {
-  font-size: 38px;
-  font-weight: 800;
-  color: #0f172a;
-  margin-bottom: 25px;
-}
-
-.price span {
-  font-size: 14px;
-  color: #64748b;
-  font-weight: 500;
-}
-
-/* ===== FEATURES ===== */
-.features {
-  list-style: none;
-  padding: 0;
-  margin: 0 0 30px;
-  text-align: left;
-}
-
-.features li {
-  padding: 8px 0;
-  color: #334155;
-  font-size: 14px;
-}
-
-/* ===== STATUS COLORS ===== */
-.active { color: #16a34a; }
-.inactive { color: #dc2626; }
-
-/* ===== BUTTONS ===== */
-.actions {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.btn-outline {
-  border: 1px solid #0f172a;
-  color: #0f172a;
-  padding: 11px;
-  border-radius: 10px;
-  text-decoration: none;
-  font-weight: 600;
-  transition: .25s;
-}
-
-.btn-outline:hover {
-  background: #0f172a;
-  color: white;
-}
-
-.btn-primary {
-  background: #c7a36b;
-  color: white;
-  padding: 12px;
-  border-radius: 10px;
-  text-decoration: none;
-  font-weight: 700;
-  transition: .25s;
-}
-
-.btn-primary:hover {
-  background: #b89355;
-}
-/* ===== FREE PLAN SPECIAL ===== */
-.pricing-card.free-plan {
-  border: 2px solid #22c55e;
-  background: linear-gradient(180deg,#ffffff,#f0fdf4);
-  transform: scale(1.04);
-}
-
-.pricing-card.free-plan .price {
-  color: #16a34a;
-  font-weight: 900;
-}
-
-.free-btn {
-  background: #22c55e !important;
-}
-
-.free-btn:hover {
-  background: #16a34a !important;
-}
-</style>
-
-
-<body class="bg-slate-100 text-slate-900">
-
-<!-- HEADER -->
-<header class="bg-slate-900">
-
-  <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-    <h1 class="text-white text-xl font-bold">PhotoShare</h1>
-    <a href="/" class="text-slate-300 hover:text-white text-sm">Homepage</a>
+        <a href="{{ url_for('purchase_plan', plan_id=plan.id) }}" 
+           class="btn btn-primary">
+          Choose this plan
+        </a>
+      </div>
+    {% else %}
+      <p class="no-plans">No active plans available at the moment.</p>
+    {% endfor %}
   </div>
-</header>
 
-<section class="pricing-section">
-  <div class="max-w-7xl mx-auto px-6">
-<h2 class="text-4xl font-bold text-center mb-12 text-slate-800"> Subscription Plans </h2>
- <div class="pricing-grid"> {% for plan in plans %} 
-  <div class="pricing-card {% if plan.is_recommended or plan.price == 0 %}recommended{% endif %} {% if plan.price == 0 %}free-plan{% endif %}"> 
-    <!-- BADGE --> {% if plan.price == 0 %} 
-     <div class="badge">🆓 Free Plan</div>
-      {% elif plan.is_recommended %} <div class="badge">⭐ Recommended</div>
-       {% endif %} 
-       <!-- Plan Name --> 
-        <h3 class="text-2xl font-semibold mb-2 text-slate-800"> {{ plan.name }} 
-       </h3>
-        <!-- Price -->
-          <div class="price"> ₹{{ "%.2f"|format(plan.price) }}
-             <span>/ plan</span>
-             </div>
-              <!-- Features --> 
-               <ul class="features">
-                 <li>📦 Storage: <strong>{{ plan.storage }} GB</strong></li>
-                  <li>⏳ Duration: <strong>{{ plan.duration }} days</strong></li> 
-                  <li>
-                     🔖 Status:
-                      <strong class="{{ 'active' if plan.status=='active' else 'inactive' }}"> 
-                        {{ plan.status|capitalize }} </strong>
-                       </li> 
-                      </ul>
-                       <!-- Buttons --> 
-                        <div class="actions">
-                           <a href="{{ url_for('plan_details', plan_id=plan.id) }}"
-                            class="btn-outline">View Plan</a> 
-                           <a href="{{ url_for('activate_plan', plan_id=plan.id) }}"
-   class="btn-primary">
-   Activate Plan
-</a>
-                          </div>
-                         </div> 
-                         {% endfor %}
-                         </div>
-  </div>
-</section>
-
-<footer class="bg-slate-900 text-slate-400 py-6 mt-16">
-
-  <p class="text-center text-sm">
-    © 2026 PhotoShare. All rights reserved.
-  </p>
-</footer>
-
+</div>
 
 </body>
 </html>

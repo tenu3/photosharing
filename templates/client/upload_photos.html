@@ -3,6 +3,120 @@
 <head>
     <meta charset="UTF-8">
     <title>Upload Photos | {{ gallery.title }}</title>
+    <style>   
+    /* PAGE BACKGROUND */
+.upload-page {
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start; /* keeps it slightly top */
+    padding: 40px 20px;
+    background: #f6f7fb;
+}
+
+/* MAIN CARD */
+.upload-card {
+    width: 100%;
+    max-width: 720px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 40px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+}
+
+/* HEADINGS */
+.upload-card h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.gallery-name {
+    color: #6b7280;
+    margin-bottom: 30px;
+}
+
+/* EMPTY STATE */
+.empty-state {
+    text-align: center;
+    color: #9ca3af;
+    margin: 30px 0 40px;
+}
+
+/* SECTION TITLES */
+.section-title {
+    font-weight: 600;
+    margin: 30px 0 14px;
+}
+
+/* DROP ZONE */
+.drop-zone {
+    border: 2px dashed #d1d5db;
+    border-radius: 14px;
+    padding: 50px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.25s;
+    background: #fafafa;
+}
+
+.drop-zone:hover {
+    border-color: #111827;
+    background: #f9fafb;
+}
+
+.drop-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+}
+
+/* URL INPUT */
+.url-input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    margin-top: 10px;
+    margin-bottom: 18px;
+    font-size: 14px;
+}
+
+/* IMPORT BUTTON */
+.import-btn {
+    width: 100%;
+    padding: 16px;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, #0f172a, #020617);
+    color: white;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: 0.25s;
+}
+
+.import-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+<style>
+@keyframes pulseGlow {
+    0%,100% { box-shadow: 0 0 0 rgba(234,179,8,0); }
+    50% { box-shadow: 0 0 30px rgba(234,179,8,0.45); }
+}
+
+.drop-active {
+    animation: pulseGlow 1.2s infinite;
+    border-color: #eab308 !important;
+    background-color: #fefce8 !important;
+}
+
+.bounce-icon {
+    transform: scale(1.15);
+}
+</style>
+</style>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -57,12 +171,36 @@
               action="{{ url_for('upload_photos', gallery_id=gallery.id) }}"
               method="POST"
               enctype="multipart/form-data">
-
             <div id="dropzone"
-                 class="border-3 border-dashed border-gray-400 rounded-xl p-12 text-center cursor-pointer hover:border-yellow-500 hover:bg-yellow-50 transition-all duration-300">
-                <p class="text-xl font-medium text-gray-700">Drop photos here</p>
-                <p class="text-sm text-gray-500 mt-3">or click to select files (multiple allowed)</p>
-            </div>
+     class="relative border-2 border-dashed border-gray-300 rounded-2xl p-14 text-center cursor-pointer
+            transition-all duration-300 ease-in-out
+            hover:border-yellow-500 hover:bg-yellow-50">
+
+    <!-- glowing background -->
+    <div id="dropGlow"
+         class="absolute inset-0 rounded-2xl opacity-0 transition duration-300 pointer-events-none">
+    </div>
+
+    <!-- icon -->
+    <div id="dropIcon"
+         class="text-5xl mb-4 transition-transform duration-300">
+        📤
+    </div>
+
+    <p class="text-xl font-semibold text-gray-700">
+        Drop photos here
+    </p>
+
+    <p class="text-sm text-gray-500 mt-2">
+        or click to select files (multiple allowed)
+    </p>
+
+    <!-- uploading text -->
+    <p id="uploadText"
+       class="mt-4 text-yellow-600 font-medium hidden">
+        Uploading...
+    </p>
+</div>
 
             <input type="file"
                    id="fileInput"
@@ -97,7 +235,7 @@
 
     <a href="{{ url_for('manage_gallery', gallery_id=gallery.id) }}"
        class="block text-center mt-10 text-gray-600 hover:text-gray-800 font-medium">
-        ← Back to Gallery Management
+        ← Back to Galleries
     </a>
 
 </div>
@@ -107,6 +245,8 @@
 const dropzone = document.getElementById("dropzone");
 const input = document.getElementById("fileInput");
 const form = document.getElementById("uploadForm");
+const icon = document.getElementById("dropIcon");
+const uploadText = document.getElementById("uploadText");
 
 dropzone.addEventListener("click", () => input.click());
 

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ page_title|default("Confirm & Pay for Plan") }}</title>
+
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #f8f9fa;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 2.5rem auto;
+      padding: 0 20px;
+    }
+
+    h2 {
+      text-align: center;
+      color: #2c3e50;
+      margin-bottom: 2rem;
+    }
+
+    .plan-summary {
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.06);
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .plan-summary h3 {
+      margin: 0 0 1.2rem;
+      font-size: 1.9rem;
+      color: #2c3e50;
+    }
+
+    .price {
+      font-size: 2.8rem;
+      font-weight: 700;
+      color: #27ae60;
+      margin: 0.8rem 0 1.5rem;
+    }
+
+    .plan-summary p {
+      margin: 0.9rem 0;
+      font-size: 1.1rem;
+    }
+
+    .plan-summary strong {
+      color: #34495e;
+    }
+
+    .recommended {
+      color: #e67e22;
+      font-weight: bold;
+      font-size: 1.15rem;
+      margin-top: 1rem;
+      display: inline-block;
+    }
+
+    .warning-text {
+      color: #7f8c8d;
+      text-align: center;
+      margin: 1.5rem 0 2rem;
+      font-size: 1.05rem;
+    }
+
+    .pay-section {
+      text-align: center;
+      margin: 2rem 0;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 0.95rem 2.2rem;
+      font-size: 1.1rem;
+      font-weight: 500;
+      border-radius: 8px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .btn-pay {
+      background: #f37254;
+      color: white;
+      padding: 1.1rem 3rem;
+      font-size: 1.25rem;
+    }
+
+    .btn-pay:hover {
+      background: #e25c40;
+      transform: translateY(-2px);
+    }
+
+    .btn-secondary {
+      background: #95a5a6;
+      color: white;
+      margin-left: 1rem;
+    }
+
+    .btn-secondary:hover {
+      background: #7f8c8d;
+    }
+
+    @media (max-width: 500px) {
+      .btn {
+        width: 100%;
+        margin: 0.8rem 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <h2>Confirm & Pay</h2>
+
+  <div class="plan-summary">
+    <h3>{{ plan.name }}</h3>
+    <div class="price">₹{{ "%.2f"|format(plan.price) }}</div>
+    
+    <p><strong>Duration:</strong> {{ plan.duration }} days</p>
+    <p><strong>Storage:</strong> {{ plan.storage }} GB</p>  <!-- note: use storage_gb if that's your column -->
+    
+    {% if plan.is_recommended %}
+      <p class="recommended">Recommended Plan</p>
+    {% endif %}
+  </div>
+
+  <p class="warning-text">
+    After successful payment your current plan (if any) will be replaced automatically.
+  </p>
+
+  <div class="pay-section">
+    <button id="rzp-button" class="btn btn-pay">
+      Pay ₹{{ "%.2f"|format(plan.price) }} Securely Now
+    </button>
+
+    <a href="{{ url_for('client_plans') }}" class="btn btn-secondary">
+      Back to Plans
+    </a>
+  </div>
+
+</div>
+<script>
+  var options = {
+    "key": "{{ razorpay_key_id }}",
+    "amount": "{{ amount_paise }}",
+    "currency": "INR",
+    "name": "PhotoSharing Platform",
+    "description": "{{ plan.name }} - {{ plan.duration }} days plan",
+    "image": "https://your-domain.com/static/logo.png",  // change to real logo
+    "order_id": "{{ razorpay_order_id }}",
+    "handler": function (response){
+      var form = document.createElement("form");
+      form.method = "POST";
+      form.action = "{{ url_for('payment_verification') }}";
+
+      var fields = {
+        "razorpay_payment_id": response.razorpay_payment_id,
+        "razorpay_order_id":   response.razorpay_order_id,
+        "razorpay_signature":  response.razorpay_signature,
+        "plan_id":             "{{ plan.id }}"
+      };
+
+      for (var key in fields) {
+        var input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = fields[key];
+        form.appendChild(input);
+      }
+
+      document.body.appendChild(form);
+      form.submit();
+    },
+    "prefill": {
+      "name":  "{{ client.name|default('User') }}",
+      "email": "{{ client.email|default('') }}",
+      "contact": "{{ client.phone|default('') if client.phone else '' }}"
+    },
+    "theme": {
+      "color": "#27ae60"
+    },
+    "modal": {
+      "ondismiss": function() {
+        console.log("Checkout closed by user");
+      }
+    }
+  };
+
+  var rzp = new Razorpay(options);
+
+  document.getElementById('rzp-button').onclick = function(e) {
+    rzp.open();
+    e.preventDefault();
+  };
+</script>
+</body>
+</html>

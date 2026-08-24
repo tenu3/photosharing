@@ -361,20 +361,27 @@ def toggle_favorite():
             DELETE FROM favorites
             WHERE id=%s
         """, (existing["id"],))
-        action = "removed"
+        favorited= "False"
     else:
         # ✅ add favorite
         cursor.execute("""
             INSERT INTO favorites (photo_id, email)
             VALUES (%s, %s)
         """, (photo_id, email))
-        action = "added"
+        favorited = "True"
+        # ⭐ GET LIVE COUNT
+    cursor.execute("""
+        SELECT COUNT(*) AS total
+        FROM favorites
+        WHERE photo_id=%s
+    """, (photo_id,))
+    count = cursor.fetchone()["total"]    
 
     conn.commit()
     cursor.close()
     conn.close()
 
-    return {"success": True, "action": action}
+    return {"success": True, "favorited": favorited, "count": count}
 
 @app.route("/proof/toggle", methods=["POST"])
 def toggle_proof():
@@ -795,8 +802,8 @@ def client_dashboard():
     # ---------------------------
     cursor.execute("""
         SELECT COUNT(*) AS total
-        FROM photo_likes pl
-        JOIN photos p ON pl.photo_id = p.id
+        FROM favorites f
+        JOIN photos p ON f.photo_id = p.id
         JOIN galleries g ON p.gallery_id = g.id
         WHERE g.client_id = %s
     """, (client_id,))

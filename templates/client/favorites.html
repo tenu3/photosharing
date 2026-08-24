@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Favorites</title>
+
   <style>
     body {
       background: #111;
@@ -21,18 +22,19 @@
       padding: 40px;
     }
 
-    .photo {
+    .photo-card {
       position: relative;
       border-radius: 12px;
       overflow: hidden;
     }
 
-    .photo img {
+    .photo-card img {
       width: 100%;
-      known height: auto;
+      height: auto;
+      display: block;
     }
 
-    .remove {
+    .fav-btn {
       position: absolute;
       top: 12px;
       right: 12px;
@@ -40,6 +42,15 @@
       border-radius: 50%;
       padding: 8px;
       cursor: pointer;
+      border: none;
+      color: white;
+      font-size: 18px;
+      transition: 0.25s;
+    }
+
+    .fav-btn.active {
+      color: #ef4444;
+      transform: scale(1.15);
     }
   </style>
 </head>
@@ -49,18 +60,64 @@
 <h1>❤️ Favorites</h1>
 
 <div class="grid">
-  {% for photo in photos %}
-    <div class="photo">
-      <img src="{{ url_for('static', filename=photo.photo_path) }}">
-      <div class="remove" onclick="toggleLike({{ photo.id }})">❤️</div>
-    </div>
+
+  {% for fav in favorites %}
+  <div class="photo-card">
+
+    <img src="{{ url_for('static', filename=fav.photo_path) }}">
+
+    <!-- ❤️ Favorite button -->
+    <button id="fav-btn-{{ fav.photo_id }}"
+            onclick="toggleFavorite({{ fav.photo_id }})"
+            class="fav-btn active">
+      ❤️
+    </button>
+
+    <!-- 🔢 Live count -->
+    <span id="fav-count-{{ fav.photo_id }}"
+          style="position:absolute; bottom:10px; left:10px; background:rgba(0,0,0,0.6); padding:4px 8px; border-radius:6px; font-size:13px;">
+      {{ fav.favorite_count or 1 }}
+    </span>
+
+  </div>
   {% endfor %}
+
 </div>
 
 <script>
-function toggleLike(photoId) {
-  fetch(`/client/photo/${photoId}/like`, { method: "POST" })
-    .then(() => location.reload());
+function toggleFavorite(photoId) {
+    const email = localStorage.getItem("fav_email") || "guest";
+
+    fetch("/favorite/toggle", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            photo_id: photoId,
+            email: email
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (!data.success) return;
+
+        const heart = document.getElementById(`fav-btn-${photoId}`);
+        const countEl = document.getElementById(`fav-count-${photoId}`);
+
+        // ❤️ toggle color
+        if (data.action === "added") {
+            heart.classList.add("active");
+        } else {
+            heart.classList.remove("active");
+
+            // OPTIONAL: remove card when unfavorited
+            heart.closest(".photo-card").remove();
+        }
+
+        // 🔢 update count safely
+        if (countEl && data.count !== undefined) {
+            countEl.textContent = data.count;
+        }
+    });
 }
 </script>
 
